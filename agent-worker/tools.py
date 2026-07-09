@@ -143,8 +143,24 @@ class LabsTools:
         self.backend_url = os.getenv(env_key, os.getenv("GAPLYTIQ_BACKEND_URL", "http://localhost:5000/api"))
         self.agent = None
 
-    @llm.function_tool(description="Help the student create a custom self-assessment mock test. Pass the title of the test and a list of modules they want (e.g., ['Aptitude', 'Coding', 'HR Interview']).")
-    async def create_self_assessment(self, title: str, modules: str):
+    @llm.function_tool(description="Get the list of all available assessment modules that can be added to a mock test, including their unique keys, descriptions, and default difficulty.")
+    async def get_available_assessment_modules(self):
+        # Synchronized with frontend PipelineBuilder.tsx MODULE_LIB
+        modules = [
+            {"key": "reasoning", "label": "Logical Reasoning", "desc": "Tests logical puzzles, pattern matching, and text-based reasoning.", "default_difficulty": "Medium", "questions": 10, "time_mins": 15},
+            {"key": "non_verbal", "label": "Non Verbal and Verbal Reasoning", "desc": "Tests spatial logic, pattern completion, and visual diagram puzzles.", "default_difficulty": "Medium", "questions": 10, "time_mins": 15},
+            {"key": "aptitude", "label": "Quantitative Aptitude", "desc": "Evaluates arithmetic, algebra, math, and logical problem-solving.", "default_difficulty": "Medium", "questions": 10, "time_mins": 15},
+            {"key": "coding", "label": "Hands-on Coding", "desc": "Interactive sandbox to write, compile, and run code (Python, SQL, DSA).", "default_difficulty": "Hard", "questions": 2, "time_mins": 30},
+            {"key": "functional", "label": "Subject MCQ Test", "desc": "Domain-specific multiple choice questions (Finance, Marketing, Strategy).", "default_difficulty": "Medium", "questions": 10, "time_mins": 15},
+            {"key": "tech_interview", "label": "Technical AI Interview", "desc": "Live voice interview simulation covering programming, SQL, and design.", "default_difficulty": "Hard", "questions": 3, "time_mins": 15},
+            {"key": "domain_interview", "label": "Domain Case Interview", "desc": "Conversational case studies, strategy, and business management rounds.", "default_difficulty": "Medium", "questions": 3, "time_mins": 15},
+            {"key": "hr_interview", "label": "HR AI Interview", "desc": "Interactive conversational practice for standard HR and culture-fit rounds.", "default_difficulty": "Medium", "questions": 3, "time_mins": 10},
+            {"key": "behavioral_interview", "label": "Behavioral AI Interview", "desc": "Interactive conversational practice for behavioral, conflict, and situational rounds.", "default_difficulty": "Medium", "questions": 3, "time_mins": 10},
+        ]
+        return f"Available modules: {json.dumps(modules)}"
+
+    @llm.function_tool(description="Help the student create a custom self-assessment mock test. 'title' is the test name. 'moduleKeys' MUST be a comma-separated list of exact keys obtained from get_available_assessment_modules (e.g., 'aptitude,coding,hr_interview'). Do not guess keys.")
+    async def create_self_assessment(self, title: str, moduleKeys: str):
         try:
             if hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'session'):
                 room = self.agent.session.room_io.room
@@ -153,7 +169,7 @@ class LabsTools:
                 data = json.dumps({
                     "type": "website_control",
                     "action": "create_assessment",
-                    "payload": {"title": title, "modules": modules}
+                    "payload": {"title": title, "modules": [k.strip() for k in moduleKeys.split(',') if k.strip()]}
                 }).encode("utf-8")
                 await room.local_participant.publish_data(data, reliable=True)
             return f"Opened the Assessment Builder for '{title}'. The student can now select their modules on screen."
