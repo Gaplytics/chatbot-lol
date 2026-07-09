@@ -34,7 +34,7 @@ export const VoiceButton = ({ room, isConnected, disabled }: { room: Room | null
           <span className="gaply-mic-pulse-ring"></span>
         </span>
       ) : (
-        <MicOff size={18} />
+        <Mic size={18} />
       )}
     </button>
   );

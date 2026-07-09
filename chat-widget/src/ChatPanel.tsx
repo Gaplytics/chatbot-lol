@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLiveKit } from './hooks/useLiveKit';
 import { MessageBubble } from './MessageBubble';
-import { SuggestionChips } from './SuggestionChips';
 import { VoiceButton } from './VoiceButton';
 import { AudioPlayer } from './AudioPlayer';
+import { Send, Minimize2, Volume2, VolumeX } from 'lucide-react';
 
 export const ChatPanel = ({ tokenUrl, botName, onClose }: any) => {
   const { room, messages, isConnected, isProcessing, sendMessage, sendSettings, selectSuggestion } = useLiveKit(tokenUrl);
@@ -47,22 +47,29 @@ export const ChatPanel = ({ tokenUrl, botName, onClose }: any) => {
             </span>
           </div>
         </div>
-        <button onClick={onClose} className="gaply-close-btn" title="Minimize Chat">&times;</button>
+        <button onClick={onClose} className="gaply-close-btn" title="Minimize Chat">
+          <Minimize2 size={16} />
+        </button>
       </div>
 
       {/* 2. Interactive Settings Sub-Bar */}
       <div className="gaply-control-bar">
-        <span className="gaply-control-label">Bot Voice Output</span>
-        <label className="gaply-switch" title={botVoiceOutput ? "Click to mute bot speaking" : "Click to let bot speak answers"}>
-          <input 
-            type="checkbox" 
-            checked={botVoiceOutput} 
-            onChange={(e) => handleVoiceOutputToggle(e.target.checked)} 
-            disabled={!isConnected || isProcessing}
-          />
-          <span className="gaply-slider round"></span>
-        </label>
-        <span className="gaply-control-status">{botVoiceOutput ? "ON 🔊" : "OFF 🔇"}</span>
+        <div className="gaply-control-label-wrapper">
+          {botVoiceOutput ? <Volume2 size={16} /> : <VolumeX size={16} />}
+          <span className="gaply-control-label">Bot Voice Output</span>
+        </div>
+        <div className="gaply-voice-toggle-container">
+          <label className="gaply-switch" title={botVoiceOutput ? "Click to mute bot speaking" : "Click to let bot speak answers"}>
+            <input 
+              type="checkbox" 
+              checked={botVoiceOutput} 
+              onChange={(e) => handleVoiceOutputToggle(e.target.checked)} 
+              disabled={!isConnected || isProcessing}
+            />
+            <span className="gaply-slider"></span>
+          </label>
+          <span className="gaply-control-status">{botVoiceOutput ? "ON" : "OFF"}</span>
+        </div>
       </div>
 
       {/* 3. Messages List Area */}
@@ -85,7 +92,7 @@ export const ChatPanel = ({ tokenUrl, botName, onClose }: any) => {
         })}
         {isProcessing && (
           <div className="gaply-message-wrapper gaply-message-bot">
-             <div className="gaply-message-bubble gaply-typing-indicator">
+             <div className="gaply-typing-indicator">
                <span></span><span></span><span></span>
              </div>
           </div>
@@ -109,7 +116,7 @@ export const ChatPanel = ({ tokenUrl, botName, onClose }: any) => {
             className="gaply-send-btn"
             title="Send Message"
           >
-            Send
+            <Send size={16} />
           </button>
           
           <div className="gaply-divider-line"></div>

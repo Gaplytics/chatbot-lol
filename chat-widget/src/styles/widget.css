@@ -1,55 +1,157 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
+/* --- Modern Custom Variables & Tokens --- */
+:root {
+  --gaply-font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  
+  /* Brand Gradient & Colors (Light Theme Default) */
+  --gaply-primary-grad: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --gaply-primary-color: #6366f1;
+  --gaply-primary-hover: #4f46e5;
+  --gaply-accent-color: #ec4899;
+  
+  /* Interface Colors */
+  --gaply-bg-panel: rgba(255, 255, 255, 0.85);
+  --gaply-bg-header: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  --gaply-bg-subbar: rgba(248, 250, 252, 0.9);
+  --gaply-bg-messages: #f8fafc;
+  --gaply-bg-bubble-user: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --gaply-bg-bubble-bot: #ffffff;
+  --gaply-border-bubble-bot: rgba(226, 232, 240, 0.8);
+  --gaply-text-user: #ffffff;
+  --gaply-text-bot: #1e293b;
+  --gaply-text-muted: #64748b;
+  --gaply-input-bg: #f1f5f9;
+  --gaply-input-border: #e2e8f0;
+  --gaply-input-text: #1e293b;
+  --gaply-glass-border: rgba(255, 255, 255, 0.6);
+  --gaply-panel-shadow: 0 20px 50px rgba(99, 102, 241, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05);
+  
+  /* MCQ / Chips Styling */
+  --gaply-mcq-bg: #ffffff;
+  --gaply-mcq-border: #e2e8f0;
+  --gaply-mcq-text: #334155;
+  --gaply-mcq-hover-bg: rgba(99, 102, 241, 0.04);
+  --gaply-mcq-hover-border: #6366f1;
+  --gaply-mcq-badge-bg: #f1f5f9;
+  --gaply-mcq-badge-text: #475569;
+}
+
+/* --- Dark Theme Tokens --- */
+.gaply-theme-dark {
+  --gaply-bg-panel: rgba(15, 23, 42, 0.88);
+  --gaply-bg-header: linear-gradient(135deg, #1e1b4b 0%, #311042 100%);
+  --gaply-bg-subbar: rgba(30, 41, 59, 0.9);
+  --gaply-bg-messages: #0f172a;
+  --gaply-bg-bubble-bot: #1e293b;
+  --gaply-border-bubble-bot: rgba(51, 65, 85, 0.5);
+  --gaply-text-bot: #f8fafc;
+  --gaply-text-muted: #94a3b8;
+  --gaply-input-bg: #1e293b;
+  --gaply-input-border: #334155;
+  --gaply-input-text: #f8fafc;
+  --gaply-glass-border: rgba(255, 255, 255, 0.08);
+  --gaply-panel-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.2);
+  
+  --gaply-mcq-bg: #1e293b;
+  --gaply-mcq-border: #334155;
+  --gaply-mcq-text: #cbd5e1;
+  --gaply-mcq-hover-bg: rgba(139, 92, 246, 0.08);
+  --gaply-mcq-hover-border: #8b5cf6;
+  --gaply-mcq-badge-bg: #334155;
+  --gaply-mcq-badge-text: #cbd5e1;
+}
+
+/* --- Base Widget Wrapper --- */
 .gaply-widget {
   position: fixed;
   bottom: 24px;
   right: 24px;
   z-index: 999999;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--gaply-font-family);
+  user-select: none;
 }
 
+/* --- AAA Floating Action Button (FAB) --- */
 .gaply-fab {
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6C63FF 0%, #483dff 100%);
+  background: var(--gaply-primary-grad);
   color: white;
   border: none;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(108, 99, 255, 0.35);
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+}
+
+.gaply-fab::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(25deg);
+  transition: transform 0.6s ease;
+  pointer-events: none;
 }
 
 .gaply-fab:hover {
-  transform: scale(1.08) translateY(-2px);
-  box-shadow: 0 12px 32px rgba(108, 99, 255, 0.45);
+  transform: scale(1.08) translateY(-4px);
+  box-shadow: 0 15px 35px rgba(99, 102, 241, 0.55);
 }
 
+.gaply-fab:hover::before {
+  transform: translate(100%, 0) rotate(25deg);
+}
+
+.gaply-fab:active {
+  transform: scale(0.95) translateY(0);
+}
+
+.gaply-fab svg {
+  transition: transform 0.3s ease;
+}
+
+.gaply-fab:hover svg {
+  transform: rotate(8deg) scale(1.05);
+}
+
+/* --- Panel Container (Glassmorphism & High End Shadows) --- */
 .gaply-panel-container {
   position: absolute;
-  bottom: 90px;
+  bottom: 80px;
   right: 0;
-  width: 380px;
-  height: 620px;
+  width: 400px;
+  height: 660px;
   max-height: calc(100vh - 120px);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.6);
-  border-radius: 24px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0,0,0,0.04);
+  background: var(--gaply-bg-panel);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--gaply-glass-border);
+  border-radius: 28px;
+  box-shadow: var(--gaply-panel-shadow);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   transform-origin: bottom right;
 }
 
 @keyframes slideUpFade {
-  0% { opacity: 0; transform: scale(0.95) translateY(24px); }
+  0% { opacity: 0; transform: scale(0.92) translateY(32px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
@@ -61,116 +163,158 @@
   overflow: hidden;
 }
 
+/* --- Premium Header Section --- */
 .gaply-header {
-  background: linear-gradient(135deg, #6C63FF 0%, #564bf5 100%);
+  background: var(--gaply-bg-header);
   color: white;
-  padding: 16px 20px;
+  padding: 20px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  z-index: 2;
+  position: relative;
+  z-index: 10;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .gaply-header-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .gaply-avatar {
-  width: 36px;
-  height: 36px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%);
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  position: relative;
 }
 
 .gaply-avatar-initial {
-  font-weight: 600;
-  font-size: 16px;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .gaply-header-text h3 {
   margin: 0;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
+  letter-spacing: -0.2px;
 }
 
 .gaply-status {
   font-size: 12px;
-  opacity: 0.85;
+  opacity: 0.9;
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .gaply-status-dot {
-  width: 6px;
-  height: 6px;
-  background: #ffaa00;
+  width: 8px;
+  height: 8px;
+  background: #f59e0b;
   border-radius: 50%;
+  position: relative;
 }
+
 .gaply-status-dot.connected {
-  background: #00e676;
-  box-shadow: 0 0 8px #00e676;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: pulseGreen 2s infinite;
+}
+
+@keyframes pulseGreen {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
 }
 
 .gaply-close-btn {
-  background: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.12);
   border: none;
   color: white;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .gaply-close-btn:hover {
-  background: rgba(255,255,255,0.25);
-  transform: scale(1.05);
+  background: rgba(255,255,255,0.22);
+  transform: translateY(-1px);
 }
 
-/* 2. Control Bar (Settings Toggle Row) */
+.gaply-close-btn:active {
+  transform: scale(0.95);
+}
+
+/* --- Interactive Control Bar --- */
 .gaply-control-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px;
-  background: #f4f5f8;
-  border-bottom: 1px solid #eef0f3;
-  z-index: 1;
+  padding: 12px 24px;
+  background: var(--gaply-bg-subbar);
+  border-bottom: 1px solid var(--gaply-glass-border);
+  z-index: 5;
+  backdrop-filter: blur(12px);
+}
+
+.gaply-control-label-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gaply-text-muted);
 }
 
 .gaply-control-label {
   font-size: 13px;
-  font-weight: 500;
-  color: #555c6d;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+}
+
+.gaply-voice-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .gaply-control-status {
   font-size: 11px;
-  font-weight: 600;
-  color: #6C63FF;
-  width: 45px;
-  text-align: right;
+  font-weight: 700;
+  color: var(--gaply-primary-color);
+  letter-spacing: 0.5px;
 }
 
-/* Toggle Switch */
+/* Premium Custom Switch */
 .gaply-switch {
   position: relative;
   display: inline-block;
   width: 44px;
-  height: 22px;
+  height: 24px;
 }
 
 .gaply-switch input {
@@ -186,62 +330,72 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #cbd5e1;
-  transition: .3s;
+  background-color: var(--gaply-input-border);
+  transition: .4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 34px;
 }
 
 .gaply-slider:before {
   position: absolute;
   content: "";
-  height: 16px;
-  width: 16px;
+  height: 18px;
+  width: 18px;
   left: 3px;
   bottom: 3px;
   background-color: white;
-  transition: .3s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-}
-
-input:checked + .gaply-slider {
-  background-color: #6C63FF;
-}
-
-input:focus + .gaply-slider {
-  box-shadow: 0 0 1px #6C63FF;
-}
-
-input:checked + .gaply-slider:before {
-  transform: translateX(22px);
-}
-
-.gaply-slider.round {
-  border-radius: 34px;
-}
-
-.gaply-slider.round:before {
+  transition: .4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
   border-radius: 50%;
 }
 
-/* 3. Messages List Area */
+input:checked + .gaply-slider {
+  background: var(--gaply-primary-grad);
+}
+
+input:checked + .gaply-slider:before {
+  transform: translateX(20px);
+}
+
+/* --- Messages List & Bubbles --- */
 .gaply-messages {
   flex: 1;
-  padding: 20px;
+  padding: 24px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  background: #f8fafc;
+  gap: 16px;
+  background: var(--gaply-bg-messages);
+  scrollbar-width: thin;
+  scrollbar-color: var(--gaply-input-border) transparent;
+}
+
+/* Custom Scrollbar */
+.gaply-messages::-webkit-scrollbar {
+  width: 5px;
+}
+
+.gaply-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.gaply-messages::-webkit-scrollbar-thumb {
+  background: var(--gaply-input-border);
+  border-radius: 20px;
+}
+
+.gaply-messages::-webkit-scrollbar-thumb:hover {
+  background: var(--gaply-text-muted);
 }
 
 .gaply-message-wrapper {
   display: flex;
   width: 100%;
-  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: bubbleAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes bubbleAppear {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .gaply-message-user {
@@ -252,74 +406,92 @@ input:checked + .gaply-slider:before {
   justify-content: flex-start;
 }
 
-.gaply-message-bubble {
+.gaply-message-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   max-width: 82%;
-  padding: 12px 16px;
-  border-radius: 18px;
-  font-size: 14px;
-  line-height: 1.5;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.gaply-message-user .gaply-message-container {
+  align-items: flex-end;
+}
+
+.gaply-message-bot .gaply-message-container {
+  align-items: flex-start;
+}
+
+.gaply-message-bubble {
+  padding: 14px 18px;
+  border-radius: 20px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
   word-wrap: break-word;
 }
 
 .gaply-message-user .gaply-message-bubble {
-  background: linear-gradient(135deg, #6C63FF 0%, #564bf5 100%);
-  color: white;
+  background: var(--gaply-bg-bubble-user);
+  color: var(--gaply-text-user);
   border-bottom-right-radius: 4px;
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.2);
 }
 
 .gaply-message-bot .gaply-message-bubble {
-  background-color: white;
-  color: #2c3444;
-  border: 1px solid #eef2f6;
+  background-color: var(--gaply-bg-bubble-bot);
+  color: var(--gaply-text-bot);
+  border: 1px solid var(--gaply-border-bubble-bot);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+/* Typing Indicator Redesign */
+.gaply-typing-indicator {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 16px 22px;
+  background-color: var(--gaply-bg-bubble-bot);
+  border: 1px solid var(--gaply-border-bubble-bot);
+  border-radius: 20px;
   border-bottom-left-radius: 4px;
 }
 
-/* Typing Indicator */
-.gaply-typing-indicator {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  padding: 14px 18px;
-}
-
 .gaply-typing-indicator span {
-  width: 6px;
-  height: 6px;
-  background-color: #94a3b8;
+  width: 7px;
+  height: 7px;
+  background-color: var(--gaply-primary-color);
   border-radius: 50%;
-  animation: bounce 1.4s infinite ease-in-out both;
+  animation: bounceDot 1.4s infinite ease-in-out both;
+  opacity: 0.6;
 }
 
 .gaply-typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
 .gaply-typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
 
-@keyframes bounce {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1); }
+@keyframes bounceDot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1.1); opacity: 1; }
 }
 
-/* 4. Multiple Choice MCQ Area */
-.gaply-mcq-container {
+/* --- MCQ Options Restyling --- */
+.gaply-inline-suggestions {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 6px;
-  margin-bottom: 6px;
-  background: rgba(108, 99, 255, 0.03);
-  border: 1px dashed rgba(108, 99, 255, 0.25);
-  border-radius: 16px;
-  padding: 14px;
+  width: 100%;
+  margin-top: 4px;
   animation: fadeIn 0.4s ease-out both;
 }
 
 .gaply-mcq-header {
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: #6C63FF;
-  font-weight: 600;
-  margin-bottom: 4px;
+  letter-spacing: 1px;
+  color: var(--gaply-text-muted);
+  font-weight: 700;
+  margin-bottom: 2px;
   padding-left: 2px;
 }
 
@@ -327,83 +499,99 @@ input:checked + .gaply-slider:before {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
 }
 
 .gaply-mcq-option-card {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  padding: 10px 14px;
-  border-radius: 12px;
+  background: var(--gaply-mcq-bg);
+  border: 1px solid var(--gaply-mcq-border);
+  padding: 12px 16px;
+  border-radius: 14px;
   cursor: pointer;
   text-align: left;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.01);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+  width: 100%;
 }
 
-.gaply-mcq-option-card:hover {
-  border-color: #6C63FF;
-  background: rgba(108, 99, 255, 0.02);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.08);
+.gaply-mcq-option-card:hover:not(:disabled) {
+  border-color: var(--gaply-mcq-hover-border);
+  background: var(--gaply-mcq-hover-bg);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.08);
 }
 
 .gaply-mcq-badge {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--gaply-mcq-badge-bg);
+  color: var(--gaply-mcq-badge-text);
   font-size: 11px;
-  font-weight: 600;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  font-weight: 700;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--gaply-mcq-border);
   flex-shrink: 0;
+  transition: all 0.2s ease;
 }
 
-.gaply-mcq-option-card:hover .gaply-mcq-badge {
-  background: #6C63FF;
+.gaply-mcq-option-card:hover:not(:disabled) .gaply-mcq-badge {
+  background: var(--gaply-primary-color);
   color: white;
-  border-color: #6C63FF;
+  border-color: var(--gaply-primary-color);
 }
 
 .gaply-mcq-text {
   font-size: 13.5px;
-  font-weight: 500;
-  color: #334155;
-  line-height: 1.3;
+  font-weight: 600;
+  color: var(--gaply-mcq-text);
+  line-height: 1.4;
 }
 
-.gaply-mcq-option-card:hover .gaply-mcq-text {
-  color: #1e1b4b;
+/* MCQ Disabled / Answered State */
+.gaply-mcq-disabled {
+  opacity: 0.65;
+  cursor: default !important;
+  pointer-events: none;
+  background: transparent !important;
+  border-color: var(--gaply-input-border) !important;
+  box-shadow: none !important;
 }
 
-/* 5. Clean Input Panel */
+.gaply-mcq-disabled .gaply-mcq-badge {
+  background: transparent !important;
+  border-color: var(--gaply-input-border) !important;
+  color: var(--gaply-text-muted) !important;
+}
+
+/* --- Input Area Container --- */
 .gaply-input-container {
-  padding: 14px 16px;
-  background: white;
-  border-top: 1px solid #f1f5f9;
+  padding: 16px 20px;
+  background: var(--gaply-bg-panel);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--gaply-glass-border);
 }
 
 .gaply-input-area {
   display: flex;
   align-items: center;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 28px;
-  padding: 4px 6px 4px 16px;
-  gap: 8px;
-  transition: all 0.2s;
+  background: var(--gaply-input-bg);
+  border: 1px solid var(--gaply-input-border);
+  border-radius: 20px;
+  padding: 6px 8px 6px 16px;
+  gap: 10px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .gaply-input-area:focus-within {
-  border-color: #6C63FF;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
+  border-color: var(--gaply-primary-color);
+  background: var(--gaply-bg-bubble-bot);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
 }
 
 .gaply-input-area input {
@@ -412,77 +600,84 @@ input:checked + .gaply-slider:before {
   background: transparent;
   outline: none;
   font-family: inherit;
-  font-size: 14px;
-  color: #334155;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--gaply-input-text);
   padding: 8px 0;
 }
 
-.gaply-input-area input:disabled {
-  color: #94a3b8;
+.gaply-input-area input::placeholder {
+  color: var(--gaply-text-muted);
+  opacity: 0.8;
 }
 
+/* Send Icon Button */
 .gaply-send-btn {
-  background: #6C63FF;
+  background: var(--gaply-primary-grad);
   color: white;
   border: none;
-  border-radius: 20px;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 600;
+  border-radius: 14px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
 }
 
 .gaply-send-btn:hover:not(:disabled) {
-  background: #564bf5;
-  transform: scale(1.02);
+  background: var(--gaply-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(99, 102, 241, 0.35);
 }
 
 .gaply-send-btn:disabled {
-  background: #e2e8f0;
-  color: #94a3b8;
+  background: var(--gaply-input-border);
+  color: var(--gaply-text-muted);
   cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.5;
 }
 
 .gaply-divider-line {
   width: 1px;
   height: 24px;
-  background: #e2e8f0;
+  background: var(--gaply-input-border);
   margin: 0 2px;
 }
 
-/* Polished Voice Input Mic Button */
+/* Redesigned Voice Input Trigger Button */
 .gaply-voice-btn {
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  color: #475569;
+  background: transparent;
+  border: none;
+  color: var(--gaply-text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
-  transition: all 0.2s;
+  border-radius: 14px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
 }
 
 .gaply-voice-btn:hover:not(:disabled) {
-  background: #e2e8f0;
-  color: #1e293b;
-  transform: scale(1.05);
+  background: var(--gaply-input-border);
+  color: var(--gaply-input-text);
 }
 
 .gaply-voice-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
-  transform: none;
 }
 
 .gaply-voice-btn.active {
   background: #ef4444;
   color: white;
-  border-color: #ef4444;
 }
 
 .gaply-mic-active-wrapper {
@@ -497,7 +692,7 @@ input:checked + .gaply-slider:before {
   width: 36px;
   height: 36px;
   border: 2px solid #ef4444;
-  border-radius: 50%;
+  border-radius: 14px;
   animation: micPulseRing 1.6s infinite ease-out;
   opacity: 0;
   pointer-events: none;
@@ -505,131 +700,13 @@ input:checked + .gaply-slider:before {
 
 @keyframes micPulseRing {
   0% { transform: scale(0.9); opacity: 0.8; }
-  100% { transform: scale(1.6); opacity: 0; }
+  100% { transform: scale(1.5); opacity: 0; }
 }
 
-/* 6. Dark Theme overrides */
-.gaply-theme-dark .gaply-panel-container {
-  background: rgba(15, 23, 42, 0.95);
-  border-color: rgba(255,255,255,0.08);
-}
-.gaply-theme-dark .gaply-control-bar {
-  background: #1e293b;
-  border-bottom-color: #334155;
-}
-.gaply-theme-dark .gaply-control-label {
-  color: #94a3b8;
-}
-.gaply-theme-dark .gaply-messages {
-  background: #0f172a;
-}
-.gaply-theme-dark .gaply-message-bot .gaply-message-bubble {
-  background-color: #1e293b;
-  color: #f1f5f9;
-  border-color: #334155;
-}
-.gaply-theme-dark .gaply-mcq-container {
-  background: rgba(108, 99, 255, 0.05);
-  border-color: rgba(108, 99, 255, 0.3);
-}
-.gaply-theme-dark .gaply-mcq-option-card {
-  background: #1e293b;
-  border-color: #334155;
-}
-.gaply-theme-dark .gaply-mcq-option-card:hover {
-  background: rgba(108, 99, 255, 0.05);
-  border-color: #6C63FF;
-}
-.gaply-theme-dark .gaply-mcq-badge {
-  background: #334155;
-  color: #94a3b8;
-  border-color: #475569;
-}
-.gaply-theme-dark .gaply-mcq-text {
-  color: #cbd5e1;
-}
-.gaply-theme-dark .gaply-mcq-option-card:hover .gaply-mcq-text {
-  color: #f8fafc;
-}
-.gaply-theme-dark .gaply-input-container {
-  background: #0f172a;
-  border-top-color: #1e293b;
-}
-.gaply-theme-dark .gaply-input-area {
-  background: #1e293b;
-  border-color: #334155;
-}
-.gaply-theme-dark .gaply-input-area input {
-  color: #f1f5f9;
-}
-.gaply-theme-dark .gaply-divider-line {
-  background: #334155;
-}
-.gaply-theme-dark .gaply-voice-btn {
-  background: #334155;
-  border-color: #475569;
-  color: #94a3b8;
-}
-.gaply-theme-dark .gaply-voice-btn:hover:not(:disabled) {
-  background: #475569;
-  color: #f1f5f9;
-}
-.gaply-theme-dark .gaply-typing-indicator span {
-  background-color: #64748b;
-}
-
-/* --- Inline Suggestions & MCQ UI --- */
-.gaply-message-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 85%;
-}
-
-.gaply-message-bot .gaply-message-container {
-  align-items: flex-start;
-}
-
-.gaply-message-user .gaply-message-container {
-  align-items: flex-end;
-}
-
-.gaply-inline-suggestions {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-  animation: fadeIn 0.4s ease-out both;
-}
-
-.gaply-suggestions-disabled {
-  opacity: 0.6;
-}
-
-.gaply-mcq-disabled {
-  opacity: 0.7;
-  cursor: default !important;
-  pointer-events: none;
-  background: transparent !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-}
-
-.gaply-mcq-disabled .gaply-mcq-badge {
-  background: transparent !important;
-  border-color: #e2e8f0 !important;
-  color: #94a3b8 !important;
-}
-
-.gaply-theme-dark .gaply-mcq-disabled .gaply-mcq-badge {
-  border-color: #334155 !important;
-  color: #64748b !important;
-}
-
-/* --- Markdown Parsing Styles --- */
+/* --- Markdown Styles inside Bubble --- */
 .gaply-markdown-body {
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 14.5px;
+  line-height: 1.6;
 }
 
 .gaply-markdown-body p {
@@ -646,11 +723,9 @@ input:checked + .gaply-slider:before {
 }
 
 .gaply-markdown-body li {
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .gaply-markdown-body strong {
-  font-weight: 600;
-  color: inherit;
+  font-weight: 700;
 }
-
