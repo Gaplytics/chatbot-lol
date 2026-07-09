@@ -62,7 +62,7 @@ export function useLiveKit(tokenUrl: string, tenantId: string | null) {
               if (parsed.action === 'navigate' && parsed.payload?.url) {
                 console.log(`Gaply Agent navigating to: ${parsed.payload.url}`);
                 // In a production app you might want to remove this fallback if you rely on React Router
-                window.location.href = parsed.payload.url;
+                // window.location.href = parsed.payload.url;
               } else if (parsed.action === 'highlight' && parsed.payload?.selector) {
                 const el = document.querySelector(parsed.payload.selector);
                 if (el) {
