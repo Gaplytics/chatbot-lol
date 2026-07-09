@@ -67,22 +67,26 @@ export const ChatPanel = ({ tokenUrl, botName, onClose }: any) => {
 
       {/* 3. Messages List Area */}
       <div className="gaply-messages">
-        {messages.map((m, i) => (
-          <MessageBubble key={m.id || i} text={m.text} sender={m.sender} />
-        ))}
+        {messages.map((m, i) => {
+          // A bot message's suggestions are active if it's the very last message in the array
+          const isActive = m.sender === 'bot' && i === messages.length - 1;
+          
+          return (
+            <MessageBubble 
+              key={m.id || i} 
+              text={m.text} 
+              sender={m.sender} 
+              suggestions={m.suggestions}
+              isActiveSuggestions={isActive}
+              onSelectSuggestion={(text) => sendMessage(text, botVoiceOutput)}
+            />
+          );
+        })}
         {isProcessing && (
           <div className="gaply-message-wrapper gaply-message-bot">
              <div className="gaply-message-bubble gaply-typing-indicator">
                <span></span><span></span><span></span>
              </div>
-          </div>
-        )}
-        
-        {/* Suggestion Chips formatted as Multiple Choice Options */}
-        {!isProcessing && suggestions.length > 0 && (
-          <div className="gaply-mcq-container">
-            <div className="gaply-mcq-header">Select an option:</div>
-            <SuggestionChips chips={suggestions} onSelect={(text) => sendMessage(text, botVoiceOutput)} />
           </div>
         )}
         <div ref={messagesEndRef} />

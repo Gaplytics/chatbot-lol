@@ -4,7 +4,6 @@ import { Room, RoomEvent } from 'livekit-client';
 export function useLiveKit(tokenUrl: string) {
   const [room, setRoom] = useState<Room | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -37,7 +36,15 @@ export function useLiveKit(tokenUrl: string) {
           try {
             const parsed = JSON.parse(strData);
             if (parsed.type === 'suggestions') {
-              setSuggestions(parsed.data);
+              // Find the last bot message and attach suggestions to it
+              const msgs = [...messagesRef.current];
+              for (let i = msgs.length - 1; i >= 0; i--) {
+                if (msgs[i].sender === 'bot') {
+                  msgs[i] = { ...msgs[i], suggestions: parsed.data };
+                  updateMessages(msgs);
+                  break;
+                }
+              }
             } else if (parsed.type === 'text_stream') {
               // Handle real-time text streaming
               const { id, text, final } = parsed;
@@ -130,7 +137,6 @@ export function useLiveKit(tokenUrl: string) {
       const localId = 'local-' + Date.now();
       updateMessages([...messagesRef.current, { id: localId, text, sender: 'user', final: true }]);
       setIsProcessing(true);
-      setSuggestions([]);
       
       const payload = new TextEncoder().encode(JSON.stringify({
         type: 'chat',
@@ -152,5 +158,5 @@ export function useLiveKit(tokenUrl: string) {
     }
   }, [room, isConnected]);
 
-  return { room, messages, suggestions, isConnected, isProcessing, sendMessage, sendSettings };
+  return { room, messages, isConnected, isProcessing, sendMessage, sendSettings };
 }
