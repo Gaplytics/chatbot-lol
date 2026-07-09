@@ -2,7 +2,7 @@ import os
 import logging
 import json
 import asyncio
-from typing import AsyncIterable
+from typing import AsyncIterable, Callable, Optional, List, Dict
 from livekit.agents.voice import Agent
 from livekit.agents import llm
 from livekit.plugins import openai, deepgram, silero
@@ -17,9 +17,8 @@ class GaplyAgent(Agent):
     """
     Gaplytiq Institute chat agent.
 
-    voice_output_enabled controls the TTS pipeline globally:
-      - False (default): mic and text both get text-only replies, no Deepgram call.
-      - True:            full voice pipeline — TTS + text for every interaction.
+    Shared memory works across voice ON/OFF modes via _conversation_history,
+    which is injected into the system prompt on every turn.
     """
 
     def __init__(self):
@@ -40,18 +39,41 @@ class GaplyAgent(Agent):
         self._retriever = RAGRetriever()
         self._bot_name = bot_name
 
-        # Starts OFF to match the UI default. main.py updates this via the
-        # settings data-channel message when the user toggles the switch.
+        # Starts OFF to match the UI default.
         self._voice_output_enabled: bool = False
 
-        # Callback set by main.py so on_user_turn_completed can publish a
-        # text-only streaming reply when voice output is disabled.
-        self._text_reply_callback = None
+        # Callbacks wired by main.py
+        self._text_reply_callback: Optional[Callable] = None
+        self._suggestions_callback: Optional[Callable] = None
+
+        # Shared conversation history — preserved across voice ON/OFF mode switches
+        # Format: [{"role": "user"|"assistant", "content": str}, ...]
+        self._conversation_history: List[Dict[str, str]] = []
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
     def set_voice_output(self, enabled: bool) -> None:
-        """Toggle TTS output on/off. Called by main.py on every settings message."""
         self._voice_output_enabled = enabled
         logger.info(f"Agent voice output set to: {enabled}")
+
+    def add_to_history(self, role: str, content: str) -> None:
+        """Append a turn to the shared conversation history (called by main.py)."""
+        self._conversation_history.append({"role": role, "content": content})
+        # Keep history bounded to last 40 messages (~20 turns)
+        if len(self._conversation_history) > 40:
+            self._conversation_history = self._conversation_history[-40:]
+
+    def _build_history_block(self) -> str:
+        """Return a compact history string for injecting into the system prompt."""
+        if not self._conversation_history:
+            return ""
+        lines = []
+        for msg in self._conversation_history[-12:]:  # last 6 turns
+            role = "User" if msg["role"] == "user" else "Assistant"
+            lines.append(f"{role}: {msg['content'][:300]}")
+        return "\n\nPrevious conversation (for memory continuity):\n" + "\n".join(lines)
 
     # ------------------------------------------------------------------
     # Pipeline node overrides
@@ -59,30 +81,43 @@ class GaplyAgent(Agent):
 
     async def llm_node(self, *args, **kwargs) -> AsyncIterable[str]:
         """
-        When voice output is OFF, skip the pipeline LLM call entirely.
-        _text_only_reply already makes its own OpenAI call for text display.
-        Skipping here saves tokens AND lets _text_only_reply stream smoothly.
+        Voice OFF → skip pipeline LLM call entirely (text_reply_callback handles it).
+        Voice ON  → run normal LLM, capture reply for shared history + suggestions.
         """
         if not self._voice_output_enabled:
-            return  # Yield nothing → tts_node also gets nothing
+            return  # Yield nothing → tts_node gets nothing too
+
+        full_reply = ""
         async for chunk in Agent.default.llm_node(self, *args, **kwargs):
-            yield chunk
+            # Extract text from ChatChunk for history; yield the original chunk object
+            try:
+                if hasattr(chunk, 'choices') and chunk.choices:
+                    delta = chunk.choices[0].delta
+                    if hasattr(delta, 'content') and delta.content:
+                        full_reply += delta.content
+            except Exception:
+                pass
+            yield chunk  # Always yield original ChatChunk — pipeline needs this type
+
+        if full_reply:
+            self.add_to_history("assistant", full_reply)
+            logger.info(f"Voice LLM reply captured ({len(full_reply)} chars)")
+            if self._suggestions_callback:
+                asyncio.ensure_future(self._suggestions_callback(full_reply))
 
     async def tts_node(self, input: AsyncIterable[str], model_settings) -> AsyncIterable[bytes]:
         if not self._voice_output_enabled:
-            # Consume LLM text silently — no Deepgram call, no audio frames.
             async for _ in input:
                 pass
             return
-        # Voice ON: default TTS pipeline (Deepgram).
         async for frame in Agent.default.tts_node(self, input, model_settings):
             yield frame
 
     # ------------------------------------------------------------------
     # Lifecycle hooks
     # ------------------------------------------------------------------
+
     async def on_enter(self) -> None:
-        """Send the initial greeting when the agent first joins the room."""
         await self.session.say(
             f"Hello! I am {self._bot_name}, your Gaplytiq Institute assistant. "
             "How can I help you today?",
@@ -92,14 +127,7 @@ class GaplyAgent(Agent):
     async def on_user_turn_completed(
         self, turn_ctx: llm.ChatContext, new_message: llm.ChatMessage
     ) -> None:
-        # ---- DEBUG: log every time this fires ----
-        logger.info(
-            f"on_user_turn_completed fired | voice_output={self._voice_output_enabled} "
-            f"| content type={type(new_message.content).__name__} "
-            f"| content repr={repr(new_message.content)[:120]}"
-        )
-
-        # Extract the transcribed user text.
+        # Extract transcribed user text from mic input
         user_text = ""
         if isinstance(new_message.content, str):
             user_text = new_message.content
@@ -110,17 +138,24 @@ class GaplyAgent(Agent):
                 elif isinstance(part, str):
                     user_text += part
 
-        logger.info(f"on_user_turn_completed extracted user_text={user_text!r}")
+        logger.info(f"on_user_turn_completed: voice_output={self._voice_output_enabled}, text={user_text!r}")
 
-        # Always refresh RAG context.
+        # RAG retrieval
+        context = "No context loaded yet."
         if user_text:
-            logger.info(f"RAG lookup for mic input: {user_text!r}")
             context = await self._retriever.retrieve(user_text)
-            updated_prompt = get_system_prompt(self._bot_name, context)
-            await self.update_instructions(updated_prompt)
 
-        # If voice output is OFF, publish a text-only reply via data channel.
-        # tts_node will drain the LLM output without calling Deepgram.
-        if not self._voice_output_enabled and user_text and self._text_reply_callback:
-            logger.info("Voice OFF — sending text-only reply for mic input")
-            asyncio.ensure_future(self._text_reply_callback(user_text))
+        # Build system prompt + inject shared history for cross-mode memory
+        history_block = self._build_history_block()
+        updated_prompt = get_system_prompt(self._bot_name, context) + history_block
+        await self.update_instructions(updated_prompt)
+
+        if user_text:
+            if self._voice_output_enabled:
+                # Voice ON: track user turn now; llm_node will track assistant reply
+                self.add_to_history("user", user_text)
+            else:
+                # Voice OFF: text_reply_callback handles both user + assistant history
+                if self._text_reply_callback:
+                    logger.info("Voice OFF — routing mic input to text-only reply")
+                    asyncio.ensure_future(self._text_reply_callback(user_text))
