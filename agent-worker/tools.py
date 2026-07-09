@@ -148,17 +148,18 @@ class LabsTools:
         try:
             if hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'session'):
                 room = self.agent.session.room_io.room
-                # Tell frontend to navigate to the builder
+                # Dispatch a named action event — the dashboard React page listens for this
+                # and calls its internal handleCreateNew() without any page reload
                 data = json.dumps({
                     "type": "website_control",
-                    "action": "navigate",
-                    "payload": {"url": "/student/dashboard?action=create"}
+                    "action": "create_assessment",
+                    "payload": {"title": title, "modules": modules}
                 }).encode("utf-8")
                 await room.local_participant.publish_data(data, reliable=True)
-            return f"Successfully opened the Assessment Builder for '{title}'. Tell the user to finalize their module selection on screen."
+            return f"Opened the Assessment Builder for '{title}'. The student can now select their modules on screen."
         except Exception as e:
             logger.error(f"Error in create_self_assessment: {e}")
-            return f"Error executing website control: {str(e)}"
+            return f"Error: {str(e)}"
 
     @llm.function_tool(description="Check the student's wallet balance and available credits for taking premium tests.")
     async def check_wallet_balance(self):
