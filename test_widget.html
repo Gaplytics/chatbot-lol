@@ -56,5 +56,19 @@
     <link rel="stylesheet" href="http://localhost:8080/style.css">
     <script src="http://localhost:8080/embed.iife.js" data-token-url="http://localhost:8080/token"></script>
 
+    <!-- Test listener for advanced website control events -->
+    <script>
+        window.addEventListener('gaply_action', (e) => {
+            console.log('🔥 Gaply Action Received:', e.detail);
+            
+            // Example of how a host website could react to a navigate command
+            if (e.detail.action === 'navigate') {
+                const url = e.detail.payload.url;
+                alert(`Gaply AI requested navigation to: ${url}\n\n(Intercepted by host website script)`);
+                // e.preventDefault() is not standard for CustomEvent but we can prevent the fallback by setting a flag if we wanted
+                // In our useLiveKit.ts we currently just do the fallback anyway unless we check for e.defaultPrevented
+            }
+        });
+    </script>
 </body>
 </html>

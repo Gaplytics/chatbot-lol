@@ -45,6 +45,27 @@ export function useLiveKit(tokenUrl: string) {
                   break;
                 }
               }
+            } else if (parsed.type === 'website_control') {
+              // Dispatch generic gaply_action event for host website to handle
+              window.dispatchEvent(new CustomEvent('gaply_action', { 
+                detail: { action: parsed.action, payload: parsed.payload } 
+              }));
+
+              // Basic fallback for navigation if host website isn't intercepting it
+              if (parsed.action === 'navigate' && parsed.payload?.url) {
+                console.log(`Gaply Agent navigating to: ${parsed.payload.url}`);
+                // In a production app you might want to remove this fallback if you rely on React Router
+                window.location.href = parsed.payload.url;
+              } else if (parsed.action === 'highlight' && parsed.payload?.selector) {
+                const el = document.querySelector(parsed.payload.selector);
+                if (el) {
+                  // A simple CSS highlight effect
+                  el.setAttribute('style', 'outline: 3px solid red; transition: outline 0.5s;');
+                  setTimeout(() => {
+                    el.removeAttribute('style');
+                  }, 3000);
+                }
+              }
             } else if (parsed.type === 'text_stream') {
               // Handle real-time text streaming
               const { id, text, final } = parsed;

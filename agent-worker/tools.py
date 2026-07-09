@@ -1,6 +1,8 @@
 import os
 import logging
 import requests
+import json
+import asyncio
 from livekit.agents import llm
 
 logger = logging.getLogger("gaply-tools")
@@ -90,3 +92,22 @@ class GaplytiqAPI:
         except Exception as e:
             logger.error(f"Error in search_faqs: {e}")
             return "Service temporarily unavailable. Please contact us directly."
+
+    @llm.function_tool(description="Control the user's web browser/UI. Use this when the user asks to be navigated to a specific page or when you want to highlight a UI element. action can be 'navigate' or 'highlight'. payload is a JSON string containing action-specific data (e.g. {'url': '/courses'} for navigate, or {'selector': '#apply-button'} for highlight).")
+    async def control_website(self, action: str, payload_json: str):
+        try:
+            if hasattr(self, 'agent') and hasattr(self.agent, 'session'):
+                room = self.agent.session.room_io.room
+                data = json.dumps({
+                    "type": "website_control",
+                    "action": action,
+                    "payload": json.loads(payload_json)
+                }).encode("utf-8")
+                
+                # Emit data channel message to the frontend React widget
+                await room.local_participant.publish_data(data, reliable=True)
+                return f"Successfully executed website control action: {action}."
+            return "Failed to control website. Agent session not available."
+        except Exception as e:
+            logger.error(f"Error in control_website: {e}")
+            return f"Error executing website control: {str(e)}"

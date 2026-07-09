@@ -330,6 +330,31 @@ Rebuild after any changes:
 docker-compose up -d --build agent-worker chat-widget
 ```
 
+## Advanced Website Control
+
+The AI bot has a `control_website` function tool that allows it to autonomously interact with your host website (e.g., navigating to pages, highlighting UI elements). 
+
+When the AI triggers this tool, the chat widget dispatches a `gaply_action` `CustomEvent` on the browser's `window` object. This event-driven architecture ensures the widget doesn't forcefully break single-page applications like React or Next.js.
+
+To make your website react to these commands, simply add an event listener anywhere in your frontend code:
+
+```javascript
+window.addEventListener('gaply_action', (e) => {
+    console.log('Action received from AI:', e.detail.action);
+    console.log('Payload:', e.detail.payload);
+
+    if (e.detail.action === 'navigate') {
+        // Use your framework's router (e.g., Next.js router.push, React Router navigate)
+        // window.location.href = e.detail.payload.url; 
+    } 
+    else if (e.detail.action === 'highlight') {
+        // e.detail.payload.selector contains the CSS selector to highlight
+    }
+});
+```
+
+*Note: The widget includes a basic fallback. If it receives a `navigate` action, it will attempt to execute `window.location.href = url` itself as a last resort.*
+
 ---
 
 ## Production Deployment

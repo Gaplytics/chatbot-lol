@@ -27,6 +27,7 @@ class GaplyAgent(Agent):
         initial_system_prompt = get_system_prompt(bot_name, "No context loaded yet.")
 
         api = GaplytiqAPI()
+        api.agent = self
         tools = llm.find_function_tools(api)
 
         super().__init__(
