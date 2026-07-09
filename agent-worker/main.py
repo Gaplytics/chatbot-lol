@@ -8,6 +8,7 @@ from livekit.agents import cli, WorkerOptions, JobContext
 from livekit.agents.voice import AgentSession
 import openai as openai_client
 from agent import GaplyAgent
+from demo_setup_agent import DemoSetupAgent
 
 load_dotenv()
 
@@ -132,6 +133,31 @@ async def entrypoint(ctx: JobContext):
     logger.info(f"Detected Tenant ID: {tenant_id}")
 
     session = AgentSession()
+    
+    # ── ROUTING: Setup Agent vs Chatbot Agent ──
+    if ctx.room.name.startswith("demo-setup-"):
+        logger.info("Routing to DemoSetupAgent for setup flow.")
+        agent = DemoSetupAgent()
+        
+        @ctx.room.on("data_received")
+        def on_data_received(data_packet: rtc.DataPacket):
+            try:
+                raw = data_packet.data.decode("utf-8").strip()
+                if not raw: return
+                parsed = json.loads(raw)
+                msg_type = parsed.get("type", "")
+                
+                if msg_type == "speak_command":
+                    text = parsed.get("text", "")
+                    if text:
+                        asyncio.ensure_future(agent._handle_speak_command(text))
+            except Exception as e:
+                logger.error(f"Error in DemoSetupAgent data handler: {e}")
+                
+        await session.start(agent, room=ctx.room)
+        return
+        
+    # ── STANDARD CHATBOT ──
     gaply_agent = GaplyAgent(tenant_id=tenant_id)
 
     # Wire suggestions callback into the agent.

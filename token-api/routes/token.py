@@ -12,6 +12,7 @@ class TokenRequest(BaseModel):
     participant_name: str = "User"
     tenant_id: str
     metadata: dict = None
+    room_name: str = None
 
 @router.post("")
 async def create_token(req: TokenRequest):
@@ -25,8 +26,8 @@ async def create_token(req: TokenRequest):
     if not livekit_api_key or not livekit_api_secret:
         raise HTTPException(status_code=500, detail="LiveKit keys are not configured correctly.")
         
-    # Unique room and identity for this session
-    room_name = f"gaply-room-{uuid.uuid4().hex[:8]}"
+    # Unique room and identity for this session (or use provided)
+    room_name = req.room_name if req.room_name else f"gaply-room-{uuid.uuid4().hex[:8]}"
     participant_identity = f"user-{uuid.uuid4().hex[:8]}"
     
     # Create video grant with appropriate permissions
