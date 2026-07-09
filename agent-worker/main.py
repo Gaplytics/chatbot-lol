@@ -18,41 +18,66 @@ logger = logging.getLogger("gaply-worker")
 
 
 # ---------------------------------------------------------------------------
-# Suggestion generation
+# Suggestion generation — RAG-grounded
 # ---------------------------------------------------------------------------
 async def _generate_suggestions(last_reply: str, agent: GaplyAgent, room: rtc.Room):
     """
-    After every AI reply, generate 3 short, grounded follow-up question chips.
-    Uses the shared conversation history so suggestions are context-aware.
-    Strict prompt to prevent hallucination.
+    Generates 3 follow-up question chips that are:
+    - Grounded in the actual knowledge base (RAG retrieval first)
+    - Relevant to the current conversation topic
+    - Not repeating questions the user already asked
     """
     try:
-        # Build compact history string
-        history_lines = []
-        for msg in agent._conversation_history[-8:]:
-            role = "User" if msg["role"] == "user" else "Bot"
-            history_lines.append(f"{role}: {msg['content'][:150]}")
-        history_str = "\n".join(history_lines) if history_lines else "(start of conversation)"
+        # ── Step 1: Build a rich query from recent context ──────────────────
+        recent_msgs = agent._conversation_history[-4:] if agent._conversation_history else []
+        rag_query = " ".join([m["content"][:100] for m in recent_msgs]) + " " + last_reply[:150]
 
+        # ── Step 2: Retrieve what the KB actually knows about this topic ────
+        # This is the key step — suggestions will be constrained to this content
+        kb_chunks = await agent._retriever.retrieve(rag_query.strip(), top_k=6)
+
+        # ── Step 3: Collect questions user already asked (no repeats) ───────
+        asked = [
+            f'- "{m["content"][:80]}"'
+            for m in agent._conversation_history
+            if m["role"] == "user"
+        ]
+        asked_str = "\n".join(asked[-8:]) if asked else "None"
+
+        # ── Step 4: Recent conversation for context ──────────────────────────
+        history_lines = [
+            f"{'User' if m['role'] == 'user' else 'Bot'}: {m['content'][:120]}"
+            for m in agent._conversation_history[-6:]
+        ]
+        history_str = "\n".join(history_lines) or "(start of conversation)"
+
+        # ── Step 5: Generate suggestions strictly from KB content ───────────
         prompt = (
             "You generate clickable follow-up question chips for a Gaplytiq Institute chatbot.\n\n"
-            f"Conversation so far:\n{history_str}\n"
-            f"Last bot reply: {last_reply[:300]}\n\n"
-            "Rules:\n"
-            "- Generate EXACTLY 3 short follow-up questions (3-7 words each)\n"
-            "- Questions must be directly about what was just discussed\n"
-            "- Do NOT invent specific fees, dates, or facts not mentioned\n"
-            "- Keep them natural — things a real user would click\n"
-            "- Return ONLY a raw JSON array of 3 strings. No markdown. No explanation.\n"
-            'Example: ["What are the course fees?", "How long is the program?", "Is it online?"]'
+            "KNOWLEDGE BASE — the ONLY source of truth. The bot can ONLY answer questions covered here:\n"
+            f"{kb_chunks}\n\n"
+            "RECENT CONVERSATION:\n"
+            f"{history_str}\n\n"
+            "LAST BOT REPLY:\n"
+            f"{last_reply[:300]}\n\n"
+            "QUESTIONS THE USER ALREADY ASKED (do NOT suggest these):\n"
+            f"{asked_str}\n\n"
+            "RULES — follow them strictly:\n"
+            "1. Generate EXACTLY 3 questions\n"
+            "2. Every question MUST be answerable using the KNOWLEDGE BASE above — if the KB doesn't cover a topic, do NOT suggest it\n"
+            "3. Questions must feel natural and relevant to what was just discussed\n"
+            "4. Keep each question between 3-8 words\n"
+            "5. Do NOT repeat already-asked questions\n"
+            "6. Return ONLY a raw JSON array of 3 strings, no markdown, no explanation\n\n"
+            'Example output: ["Who configures the tests?", "Can MBA students access coding?", "How long does approval take?"]'
         )
 
         client = openai_client.AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=80,
+            temperature=0.1,   # Low temperature = more deterministic, less hallucination
+            max_tokens=100,
         )
 
         raw = response.choices[0].message.content.strip()
@@ -64,10 +89,11 @@ async def _generate_suggestions(last_reply: str, agent: GaplyAgent, room: rtc.Ro
                 "data": [str(s) for s in suggestions[:4]]
             }).encode("utf-8")
             await room.local_participant.publish_data(payload, reliable=True)
-            logger.info(f"Suggestions sent: {suggestions[:4]}")
+            logger.info(f"RAG-grounded suggestions sent: {suggestions[:4]}")
 
     except Exception as e:
         logger.warning(f"Suggestion generation skipped: {e}")
+
 
 
 # ---------------------------------------------------------------------------

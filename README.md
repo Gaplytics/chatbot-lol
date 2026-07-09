@@ -213,7 +213,11 @@ docker-compose up -d token-api
 | **🔇 / 🔊 toggle** | Voice response toggle — **🔇 = text-only reply** (default), **🔊 = bot also speaks** via TTS |
 | **🎤 Mic button** | Toggles your microphone for voice input (bot always speaks back) |
 
-> The mic button and the 🔊 toggle are independent. The mic is for your input. The 🔊 toggle is for the bot's output.
+> **Smart Voice Toggling**: When the Bot Voice Output is set to 🔇 OFF, the backend skips the entire voice generation pipeline (Deepgram TTS and voice LLM), falling back to a text-only stream. This dramatically saves OpenAI and Deepgram token costs and removes audio latency.
+
+> **Shared Memory**: The bot maintains a unified conversation history across both typing and voice interactions. You can seamlessly switch between speaking and typing without the bot losing context.
+
+> **Inline RAG Suggestions**: After every reply, the bot generates 3 context-aware, clickable follow-up questions. These suggestions are **RAG-grounded** — they are strictly generated based on what the Knowledge Base actually knows about the current topic, preventing hallucination.
 
 ---
 
