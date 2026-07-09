@@ -10,10 +10,24 @@ export function useLiveKit(tokenUrl: string, tenantId: string | null) {
   // We use a ref to track messages so we can update them safely within event listeners
   // without dealing with stale closures
   const messagesRef = useRef<any[]>([]);
-  
+  // Keep a ref to the active room so navigation listeners can reach it
+  const roomRef = useRef<Room | null>(null);
+
   const updateMessages = (newMsgs: any[]) => {
     messagesRef.current = newMsgs;
     setMessages(newMsgs);
+  };
+
+  /** Push the current page URL and title to the agent via the data channel. */
+  const pushPageContext = (activeRoom: Room) => {
+    try {
+      const payload = new TextEncoder().encode(JSON.stringify({
+        type: 'page_context',
+        current_url: window.location.href,
+        page_title: document.title,
+      }));
+      activeRoom.localParticipant.publishData(payload, { reliable: true });
+    } catch (_) {}
   };
 
   useEffect(() => {
@@ -137,6 +151,23 @@ export function useLiveKit(tokenUrl: string, tenantId: string | null) {
         await activeRoom.connect(data.livekit_url, data.token);
         setIsConnected(true);
         setRoom(activeRoom);
+        roomRef.current = activeRoom;
+
+        // Push the initial page context to the agent immediately after connecting
+        pushPageContext(activeRoom);
+
+        // Also push on every client-side navigation (SPA route changes)
+        const onNavigation = () => pushPageContext(activeRoom);
+        window.addEventListener('popstate', onNavigation);
+
+        // Patch pushState so Next.js router navigations are also captured
+        const origPushState = history.pushState.bind(history);
+        history.pushState = (...args) => {
+          origPushState(...args);
+          // Give the DOM a tick to update document.title
+          setTimeout(() => pushPageContext(activeRoom), 100);
+        };
+
       } catch (err) {
         console.error("LiveKit connection error", err);
       }
@@ -146,6 +177,7 @@ export function useLiveKit(tokenUrl: string, tenantId: string | null) {
     
     return () => {
       activeRoom?.disconnect();
+      roomRef.current = null;
     };
   }, [tokenUrl]);
 

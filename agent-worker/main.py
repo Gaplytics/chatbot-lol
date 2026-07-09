@@ -170,6 +170,14 @@ async def entrypoint(ctx: JobContext):
                 logger.info(f"Voice output set to: {enabled}")
                 return
 
+            if msg_type == "page_context":
+                url = parsed.get("current_url", "")
+                title = parsed.get("page_title", "")
+                gaply_agent._current_url = url
+                gaply_agent._current_page_title = title
+                logger.info(f"Page context updated: {title} — {url}")
+                return
+
             if msg_type == "chat":
                 text = parsed.get("text", "").strip()
                 if not text:

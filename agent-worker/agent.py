@@ -63,6 +63,10 @@ class GaplyAgent(Agent):
         # it does not affect which LLM path is used or whether tools work.
         self._voice_output_enabled: bool = False
 
+        # Live page context — updated in real-time by the frontend via data channel
+        self._current_url: str = ""
+        self._current_page_title: str = ""
+
         # Callback wired by main.py (suggestion chip generation)
         self._suggestions_callback: Optional[Callable] = None
 
@@ -250,20 +254,13 @@ class GaplyAgent(Agent):
         if user_text:
             context = await self._retriever.retrieve(user_text)
 
-        # Read user context from metadata
+        # Build user_context from LIVE page context (updated via data channel)
         user_context = ""
-        room = self.session.room_io.room
-        for participant in room.remote_participants.values():
-            if participant.metadata:
-                try:
-                    meta = json.loads(participant.metadata)
-                    current_url = meta.get("current_url")
-                    page_title = meta.get("page_title")
-                    if current_url:
-                        user_context = f"\n\n[Live Context] The user is currently viewing the webpage '{page_title}' at URL: {current_url}. Use this if they ask context-dependent questions."
-                        break
-                except Exception:
-                    pass
+        if self._current_url:
+            user_context = (
+                f"\n\n[Live Context] The student is CURRENTLY on page: \"{self._current_page_title}\" "
+                f"at URL: {self._current_url}. Use this to answer location-aware questions like 'where am I'.\n"
+            )
 
         # Build system prompt + inject shared history for cross-mode memory
         history_block = self._build_history_block()
