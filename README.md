@@ -290,6 +290,46 @@ GaplyWidget.init({
 });
 ```
 
+### Opening greeting message
+
+By default, the bot always sends a welcome text bubble the moment it connects to a room, regardless of whether Voice Output is ON or OFF. If Voice Output is ON, it will also speak the greeting.
+
+**To change the greeting text**, edit `agent-worker/agent.py` around line 133:
+
+```python
+greeting_text = (
+    f"Hello! I'm {self._bot_name}, your Gaplytiq Institute assistant. "
+    "How can I help you today? 👋"
+)
+```
+
+**To disable the greeting entirely** (bot connects silently, user starts conversation first):
+
+```python
+# In agent-worker/agent.py, replace the on_enter method body:
+async def on_enter(self) -> None:
+    pass  # Bot connects silently — user starts the conversation
+```
+
+**To make Voice Output ON by default** (bot speaks on startup without the user toggling it), edit `agent-worker/main.py`:
+
+```python
+# Line ~196 in entrypoint()
+voice_output_enabled = {"value": True}   # change False → True
+```
+
+And in `chat-widget/src/ChatPanel.tsx`, change the initial UI state to match:
+
+```tsx
+const [botVoiceOutput, setBotVoiceOutput] = useState(true);  // change false → true
+```
+
+Rebuild after any changes:
+
+```bash
+docker-compose up -d --build agent-worker chat-widget
+```
+
 ---
 
 ## Production Deployment

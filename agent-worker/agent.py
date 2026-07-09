@@ -2,6 +2,7 @@ import os
 import logging
 import json
 import asyncio
+import uuid
 from typing import AsyncIterable, Callable, Optional, List, Dict
 from livekit.agents.voice import Agent
 from livekit.agents import llm
@@ -118,11 +119,56 @@ class GaplyAgent(Agent):
     # ------------------------------------------------------------------
 
     async def on_enter(self) -> None:
-        await self.session.say(
-            f"Hello! I am {self._bot_name}, your Gaplytiq Institute assistant. "
-            "How can I help you today?",
-            allow_interruptions=True,
+        """
+        Fires when the bot connects to the room.
+
+        Always sends the greeting as a text bubble (works even when Voice Output is OFF).
+        If Voice Output is ON, the bot will also speak the greeting aloud via TTS.
+
+        --- HOW TO DISABLE THE GREETING ---
+        To make the bot silent on connect (user starts the conversation first), simply
+        comment out or remove everything inside this method and replace it with `pass`:
+
+            async def on_enter(self) -> None:
+                pass  # Bot connects silently
+
+        To also control TTS on startup, see INITIAL_VOICE_OUTPUT in main.py (voice_output_enabled).
+        """
+        # ── 1. Customise the greeting message here ──────────────────────────
+        greeting_text = (
+            f"Hello! I'm {self._bot_name}, your Gaplytiq Institute assistant. "
+            "How can I help you today? 👋"
         )
+
+        # ── 2. Always send greeting as a chat text bubble ────────────────────
+        #    Wait briefly so the frontend DataReceived listener is ready before
+        #    we publish — without this the packet can arrive before React mounts.
+        await asyncio.sleep(1.5)
+        room = self.session.room_io.room
+        message_id = str(uuid.uuid4())
+        payload = json.dumps({
+            "type": "text_stream",
+            "id": message_id,
+            "text": greeting_text,
+            "final": False
+        }).encode("utf-8")
+        await room.local_participant.publish_data(payload, reliable=True)
+        # Send final marker so the frontend knows the bubble is complete
+        payload = json.dumps({
+            "type": "text_stream",
+            "id": message_id,
+            "text": "",
+            "final": True
+        }).encode("utf-8")
+        await room.local_participant.publish_data(payload, reliable=True)
+
+        # ── 3. Generate follow-up suggestion chips for the greeting ──────────
+        if self._suggestions_callback:
+            asyncio.ensure_future(self._suggestions_callback(greeting_text))
+
+        # ── 4. Also speak aloud if Voice Output is ON ────────────────────────
+        if self._voice_output_enabled:
+            await self.session.say(greeting_text, allow_interruptions=True)
 
     async def on_user_turn_completed(
         self, turn_ctx: llm.ChatContext, new_message: llm.ChatMessage
