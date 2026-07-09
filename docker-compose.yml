@@ -41,7 +41,7 @@ services:
     ports:
       - "7989:7989"          # WS/HTTP signal port (unique)
       - "7990:7990/tcp"      # RTC TCP fallback (unique)
-    command: --config /etc/livekit.yaml
+    command: --config /etc/livekit.yaml --node-ip=${LIVEKIT_NODE_IP:-127.0.0.1}
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml
     depends_on:
