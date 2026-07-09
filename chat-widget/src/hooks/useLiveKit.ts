@@ -23,7 +23,14 @@ export function useLiveKit(tokenUrl: string, tenantId: string | null) {
       try {
         const resp = await fetch(tokenUrl, { 
           method: 'POST', 
-          body: JSON.stringify({ participant_name: "User", tenant_id: tenantId }), 
+          body: JSON.stringify({ 
+            participant_name: "User", 
+            tenant_id: tenantId,
+            metadata: {
+              current_url: typeof window !== 'undefined' ? window.location.href : '',
+              page_title: typeof document !== 'undefined' ? document.title : ''
+            }
+          }), 
           headers: { 'Content-Type': 'application/json' }
         });
         const data = await resp.json();

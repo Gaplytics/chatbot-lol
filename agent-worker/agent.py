@@ -9,7 +9,7 @@ from livekit.agents import llm
 from livekit.plugins import openai, deepgram, silero
 from rag import RAGRetriever
 from prompts import get_system_prompt
-from tools import GaplytiqAPI
+from tools import UniversalTools, InstituteTools, EnterpriseTools
 
 logger = logging.getLogger("gaply-agent")
 
@@ -30,9 +30,18 @@ class GaplyAgent(Agent):
         bot_name = os.getenv("BOT_NAME", "Gaply")
         initial_system_prompt = get_system_prompt(bot_name, "No context loaded yet.", tenant_id)
 
-        api = GaplytiqAPI(tenant_id=tenant_id)
-        api.agent = self
-        tools = llm.find_function_tools(api)
+        universal_api = UniversalTools()
+        universal_api.agent = self
+        tools = llm.find_function_tools(universal_api)
+
+        if tenant_id == "institutes" or "institute" in tenant_id:
+            institute_api = InstituteTools(tenant_id=tenant_id)
+            institute_api.agent = self
+            tools.extend(llm.find_function_tools(institute_api))
+        elif tenant_id == "enterprise":
+            enterprise_api = EnterpriseTools(tenant_id=tenant_id)
+            enterprise_api.agent = self
+            tools.extend(llm.find_function_tools(enterprise_api))
 
         super().__init__(
             instructions=initial_system_prompt,
@@ -236,9 +245,24 @@ class GaplyAgent(Agent):
         if user_text:
             context = await self._retriever.retrieve(user_text)
 
+        # Read user context from metadata
+        user_context = ""
+        room = self.session.room_io.room
+        for participant in room.remote_participants.values():
+            if participant.metadata:
+                try:
+                    meta = json.loads(participant.metadata)
+                    current_url = meta.get("current_url")
+                    page_title = meta.get("page_title")
+                    if current_url:
+                        user_context = f"\n\n[Live Context] The user is currently viewing the webpage '{page_title}' at URL: {current_url}. Use this if they ask context-dependent questions."
+                        break
+                except Exception:
+                    pass
+
         # Build system prompt + inject shared history for cross-mode memory
         history_block = self._build_history_block()
-        updated_prompt = get_system_prompt(self._bot_name, context, self._tenant_id) + history_block
+        updated_prompt = get_system_prompt(self._bot_name, context, self._tenant_id) + user_context + history_block
         await self.update_instructions(updated_prompt)
 
         # Unconditionally track the user turn — llm_node tracks the assistant

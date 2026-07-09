@@ -7,17 +7,50 @@ from livekit.agents import llm
 
 logger = logging.getLogger("gaply-tools")
 
-class GaplytiqAPI:
+# =====================================================================
+# UNIVERSAL TOOLS
+# =====================================================================
+
+class UniversalTools:
     """
-    Function context for Gaplytiq Institute APIs.
-    These methods allow the LLM to fetch live data autonomously.
+    Tools available to EVERY Gaplytiq tenant (Institutes, Enterprise, etc.)
+    Contains core platform utilities like UI control.
     """
-    
-    def __init__(self, tenant_id: str = "institutes"):
+    def __init__(self):
+        self.agent = None  # Will be injected by the main agent loop
+
+    @llm.function_tool(description="Control the user's web browser/UI. Use this when the user asks to be navigated to a specific page or when you want to highlight a UI element. action can be 'navigate' or 'highlight'. payload is a JSON string containing action-specific data (e.g. {'url': '/courses'} for navigate, or {'selector': '#apply-button'} for highlight).")
+    async def control_website(self, action: str, payload_json: str):
+        try:
+            if hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'session'):
+                room = self.agent.session.room_io.room
+                data = json.dumps({
+                    "type": "website_control",
+                    "action": action,
+                    "payload": json.loads(payload_json)
+                }).encode("utf-8")
+                
+                # Emit data channel message to the frontend React widget
+                await room.local_participant.publish_data(data, reliable=True)
+                return f"Successfully executed website control action: {action}."
+            return "Failed to control website. Agent session not available."
+        except Exception as e:
+            logger.error(f"Error in control_website: {e}")
+            return f"Error executing website control: {str(e)}"
+
+# =====================================================================
+# INSTITUTE TOOLS
+# =====================================================================
+
+class InstituteTools:
+    """
+    Tools exclusively for College/Institute tenants.
+    """
+    def __init__(self, tenant_id: str):
         self.tenant_id = tenant_id
-        # Look for a specific API URL (e.g., INSTITUTES_API_URL), otherwise fall back to global
         env_key = f"{tenant_id.upper()}_API_URL"
         self.backend_url = os.getenv(env_key, os.getenv("GAPLYTIQ_BACKEND_URL", "http://localhost:5000/api"))
+        self.agent = None # For compatibility if needed
     
     @llm.function_tool(description="Get a list of all available courses and their basic information.")
     async def get_all_courses(self):
@@ -96,21 +129,21 @@ class GaplytiqAPI:
             logger.error(f"Error in search_faqs: {e}")
             return "Service temporarily unavailable. Please contact us directly."
 
-    @llm.function_tool(description="Control the user's web browser/UI. Use this when the user asks to be navigated to a specific page or when you want to highlight a UI element. action can be 'navigate' or 'highlight'. payload is a JSON string containing action-specific data (e.g. {'url': '/courses'} for navigate, or {'selector': '#apply-button'} for highlight).")
-    async def control_website(self, action: str, payload_json: str):
-        try:
-            if hasattr(self, 'agent') and hasattr(self.agent, 'session'):
-                room = self.agent.session.room_io.room
-                data = json.dumps({
-                    "type": "website_control",
-                    "action": action,
-                    "payload": json.loads(payload_json)
-                }).encode("utf-8")
-                
-                # Emit data channel message to the frontend React widget
-                await room.local_participant.publish_data(data, reliable=True)
-                return f"Successfully executed website control action: {action}."
-            return "Failed to control website. Agent session not available."
-        except Exception as e:
-            logger.error(f"Error in control_website: {e}")
-            return f"Error executing website control: {str(e)}"
+
+# =====================================================================
+# ENTERPRISE / B2B TOOLS (Example for future)
+# =====================================================================
+
+class EnterpriseTools:
+    """
+    Tools exclusively for Enterprise/B2B SaaS tenants.
+    """
+    def __init__(self, tenant_id: str):
+        self.tenant_id = tenant_id
+        env_key = f"{tenant_id.upper()}_API_URL"
+        self.backend_url = os.getenv(env_key, os.getenv("GAPLYTIQ_BACKEND_URL", "http://localhost:5000/api"))
+        self.agent = None
+
+    @llm.function_tool(description="Get a list of B2B SaaS plans and enterprise packages.")
+    async def get_enterprise_plans(self):
+        return "Enterprise plans include: Startup ($49/mo), Growth ($199/mo), and Custom Enterprise (Contact Sales)."
