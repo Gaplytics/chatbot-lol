@@ -280,8 +280,10 @@ class GaplyAgent(Agent):
         user_context = ""
         if self._current_url:
             user_context = (
-                f"\n\n[Live Context] The student is CURRENTLY on page: \"{self._current_page_title}\" "
-                f"at URL: {self._current_url}. Use this to answer location-aware questions like 'where am I'.\n"
+                f"\n\n[Live Context — ALWAYS TRUST THIS OVER CONVERSATION HISTORY]\n"
+                f"The student's CURRENT page RIGHT NOW is: \"{self._current_page_title}\"\n"
+                f"Current URL: {self._current_url}\n"
+                f"If the student asks 'where am I', always use this Live Context. Ignore any older page mentions in chat history — the page has changed.\n"
             )
 
         # Build system prompt + inject shared history for cross-mode memory
