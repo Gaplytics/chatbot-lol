@@ -88,7 +88,8 @@ services:
     restart: always
     networks: [gaply-net]
     ports:
-      - "8080:8080"          # THE ONLY public-facing port for the whole chatbot stack
+      - "80:80"
+      - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy-data:/data

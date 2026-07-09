@@ -2,7 +2,7 @@
 # All internal traffic routes over the gaply-net Docker bridge network.
 # Only port 8080 is exposed to the host machine.
 
-:8080 {
+chat.gaplytiq.com {
     # ─── Token API ─────────────────────────────────────────────
     # Widget fetches tokens from /token
     handle /token* {
