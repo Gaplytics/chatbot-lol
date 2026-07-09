@@ -41,6 +41,7 @@ services:
     ports:
       - "7989:7989"          # WS/HTTP signal port (unique)
       - "7990:7990/tcp"      # RTC TCP fallback (unique)
+      - "62000-62020:62000-62020/udp" # WebRTC UDP media range (CRITICAL FOR AUDIO)
     command: --config /etc/livekit.yaml --node-ip=${LIVEKIT_NODE_IP:-127.0.0.1}
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml
