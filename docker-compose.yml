@@ -1,0 +1,101 @@
+version: '3.8'
+
+# ============================================================
+# Gaply Chatbot — Single-Port Microservice Stack
+# 
+# Public Entry: Only port 8080 (Caddy) is exposed to host.
+# Caddy reverse-proxies to all internal services.
+# 
+# Port registry (ZERO conflicts with institute/enterprise):
+#   7989  = LiveKit WS      (institute=7985, enterprise=7987)
+#   7990  = LiveKit TCP     (institute=7986, enterprise=7983)
+#   62000-62020 = UDP RTC   (institute=50k-60k, enterprise=51k-61k)
+#   6380  = Redis           (host-only, not shared)
+#   6334  = Qdrant          (not exposed externally)
+#   8001  = Token API       (internal only)
+#   3001  = Widget Nginx    (internal only)
+#   8080  = Caddy (ONE public-facing port)
+# ============================================================
+
+networks:
+  gaply-net:
+    driver: bridge
+
+services:
+  # === INFRASTRUCTURE ===
+  redis:
+    image: redis:7-alpine
+    restart: always
+    networks: [gaply-net]
+    ports:
+      - "6380:6379"          # 6380 on host to avoid conflict with any existing Redis
+    volumes:
+      - redis-data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: always
+    networks: [gaply-net]
+    ports:
+      - "7989:7989"          # WS/HTTP signal port (unique)
+      - "7990:7990/tcp"      # RTC TCP fallback (unique)
+    command: --config /etc/livekit.yaml --node-ip=127.0.0.1
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml
+    depends_on:
+      - redis
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: always
+    networks: [gaply-net]
+    volumes:
+      - qdrant-data:/qdrant/storage
+    # Not exposed to host — only token-api and agent-worker access it internally
+
+  # === APPLICATION SERVICES ===
+  token-api:
+    build: ./token-api
+    restart: always
+    networks: [gaply-net]
+    env_file: .env
+    depends_on:
+      - livekit
+
+  agent-worker:
+    build: ./agent-worker
+    restart: always
+    networks: [gaply-net]
+    env_file: .env
+    depends_on:
+      - livekit
+      - qdrant
+      - token-api
+    command: python main.py start
+
+  chat-widget:
+    build: ./chat-widget
+    restart: always
+    networks: [gaply-net]
+    # Not exposed to host — Caddy serves it
+
+  # === SINGLE PUBLIC ENTRY POINT ===
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    networks: [gaply-net]
+    ports:
+      - "8080:8080"          # THE ONLY public-facing port for the whole chatbot stack
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+    depends_on:
+      - token-api
+      - chat-widget
+
+volumes:
+  redis-data:
+  qdrant-data:
+  caddy-data:

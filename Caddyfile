@@ -1,0 +1,34 @@
+# Gaply Chatbot — Caddy Reverse Proxy
+# All internal traffic routes over the gaply-net Docker bridge network.
+# Only port 8080 is exposed to the host machine.
+
+:8080 {
+    # ─── Token API ─────────────────────────────────────────────
+    # Widget fetches tokens from /token
+    handle /token* {
+        reverse_proxy token-api:8000
+    }
+
+    # ─── Admin API ─────────────────────────────────────────────
+    handle /admin* {
+        reverse_proxy token-api:8000
+    }
+
+    # ─── Health Check ──────────────────────────────────────────
+    handle /health* {
+        reverse_proxy token-api:8000
+    }
+
+    # ─── Chat Widget Static Files (embed.js etc.) ──────────────
+    # Serves the compiled embed.js and any other static assets
+    handle * {
+        reverse_proxy chat-widget:80
+    }
+
+
+    # ─── Logging ────────────────────────────────────────────────
+    log {
+        output stdout
+        format console
+    }
+}

@@ -1,0 +1,10 @@
+livekit-agents
+livekit-plugins-openai
+livekit-plugins-deepgram
+livekit-plugins-silero
+qdrant-client
+openai
+deepgram-sdk
+beautifulsoup4
+requests
+python-dotenv

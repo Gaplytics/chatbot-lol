@@ -1,0 +1,12 @@
+port: 7989
+rtc:
+  tcp_port: 7990
+  port_range_start: 62000
+  port_range_end: 62020
+  use_external_ip: false
+  node_ip: "127.0.0.1"
+redis:
+  address: redis:6379
+  db: 2              # db 2 = isolated from other services using db 0/1
+keys:
+  gaplykey: gaply-chatbot-secret-key-change-in-prod

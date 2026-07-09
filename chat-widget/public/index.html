@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaply Widget Test Page</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 2rem;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h1 { color: #2c3e50; }
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="hero">
+            <h1>Welcome to Gaplytiq Institute</h1>
+            <p>This is a test environment for the Gaply AI Chatbot Widget.</p>
+        </div>
+        
+        <h2>Integration Instructions</h2>
+        <p>The floating widget should appear in the bottom right corner of this page automatically.</p>
+        <p>It fetches its token from the local Docker stack running on port 8080.</p>
+        
+        <h3>Test Checklist:</h3>
+        <ul>
+            <li>Click the widget to open the chat panel.</li>
+            <li>Verify you hear the "Welcome" audio (if configured in agent.py).</li>
+            <li>Send a text message and wait for an answer.</li>
+            <li>Click the Mic icon to speak to the agent.</li>
+        </ul>
+    </div>
+
+    <!-- Inject the compiled React Widget -->
+    <!-- Pointing directly to our Caddy reverse proxy serving the static files -->
+    <script src="http://localhost:8080/embed.iife.js" data-token-url="http://localhost:8080/token"></script>
+
+</body>
+</html>
