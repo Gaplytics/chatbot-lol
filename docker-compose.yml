@@ -88,8 +88,7 @@ services:
     restart: always
     networks: [gaply-net]
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:8080"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy-data:/data
