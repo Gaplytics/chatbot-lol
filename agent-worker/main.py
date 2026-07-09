@@ -55,6 +55,8 @@ async def _generate_suggestions(last_reply: str, agent: GaplyAgent, room: rtc.Ro
             f"You generate clickable follow-up suggestion chips for a {tenant_name} chatbot.\n\n"
             "KNOWLEDGE BASE — the ONLY source of truth:\n"
             f"{kb_chunks}\n\n"
+            "CURRENT PAGE CONTEXT:\n"
+            f"The user is currently on this page: '{agent._current_page_title}' (URL: {agent._current_url})\n\n"
             "RECENT CONVERSATION:\n"
             f"{history_str}\n\n"
             "LAST BOT REPLY:\n"
@@ -63,10 +65,10 @@ async def _generate_suggestions(last_reply: str, agent: GaplyAgent, room: rtc.Ro
             f"{asked_str}\n\n"
             "RULES — follow them strictly:\n"
             "1. Generate EXACTLY 3 short phrases (3-8 words each).\n"
-            "2. If the LAST BOT REPLY asks a direct question (e.g. 'Should we proceed?', 'Which one?'), your suggestions MUST be natural ANSWERS to that question (e.g. 'Yes, proceed', 'No, change it').\n"
-            "3. If the bot did NOT ask a question, generate relevant follow-up QUESTIONS the user might want to ask next based on the KNOWLEDGE BASE.\n"
-            "4. Keep them conversational and highly relevant to what was just discussed.\n"
-            "5. Do NOT repeat already-asked questions.\n"
+            "2. If the LAST BOT REPLY asks a direct question, your suggestions MUST be natural ANSWERS to that question.\n"
+            "3. If this is the start of the conversation (no recent conversation), generate 3 suggestions of actions the user can take SPECIFICALLY on the CURRENT PAGE.\n"
+            "4. Otherwise, generate relevant follow-up QUESTIONS the user might want to ask next based on the KNOWLEDGE BASE.\n"
+            "5. Keep them conversational and highly relevant to what was just discussed or their current page.\n"
             "6. Return ONLY a raw JSON array of 3 strings, no markdown, no explanation.\n\n"
             'Example output: ["Who configures the tests?", "Can MBA students access coding?", "How long does approval take?"]'
         )

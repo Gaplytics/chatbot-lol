@@ -10,7 +10,7 @@ export const ChatPanel = ({ tokenUrl, botName, tenantId, onClose }: any) => {
   const [inputText, setInputText] = useState("");
   
   // Voice output toggle: Determines if bot answers with audio (also sent to backend to avoid unnecessary TTS)
-  const [botVoiceOutput, setBotVoiceOutput] = useState(false);
+  const [botVoiceOutput, setBotVoiceOutput] = useState(true);
   
   const handleVoiceOutputToggle = (enabled: boolean) => {
     setBotVoiceOutput(enabled);

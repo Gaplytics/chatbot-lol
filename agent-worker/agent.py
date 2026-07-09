@@ -59,9 +59,9 @@ class GaplyAgent(Agent):
         self._bot_name = bot_name
         self._tenant_id = tenant_id
 
-        # Starts OFF to match the UI default. This ONLY gates tts_node now —
+        # Starts ON by default, matching the user's request. This ONLY gates tts_node now —
         # it does not affect which LLM path is used or whether tools work.
-        self._voice_output_enabled: bool = False
+        self._voice_output_enabled: bool = True
 
         # Live page context — updated in real-time by the frontend via data channel
         self._current_url: str = ""
@@ -183,30 +183,48 @@ class GaplyAgent(Agent):
     async def on_enter(self) -> None:
         """
         Fires when the bot connects to the room.
-
-        Always sends the greeting as a text bubble (works even when Voice Output is OFF).
-        If Voice Output is ON, the bot will also speak the greeting aloud via TTS.
-
-        --- HOW TO DISABLE THE GREETING ---
-        To make the bot silent on connect (user starts the conversation first), simply
-        comment out or remove everything inside this method and replace it with `pass`:
-
-            async def on_enter(self) -> None:
-                pass  # Bot connects silently
-
-        To also control TTS on startup, see INITIAL_VOICE_OUTPUT in main.py (voice_output_enabled).
+        Generates a dynamic greeting based on the user's current page.
         """
-        # ── 1. Customise the greeting message here ──────────────────────────
+        # Wait a bit longer to ensure the frontend has time to mount and push the initial page context
+        await asyncio.sleep(2.0)
+        
         tenant_name = "Gaplytiq Labs" if self._tenant_id == "labs" else "Gaplytiq Enterprise" if self._tenant_id == "enterprise" else "Gaplytiq Institute"
-        greeting_text = (
-            f"Hello! I'm {self._bot_name}, your {tenant_name} assistant. "
-            "How can I help you today? 👋"
-        )
+        
+        # Determine the dynamic greeting
+        greeting_text = ""
+        try:
+            if self._current_page_title and self._current_url:
+                prompt = (
+                    f"You are {self._bot_name}, a friendly AI assistant for {tenant_name}.\n"
+                    f"The user has just opened the chat bubble on this specific page:\n"
+                    f"Title: {self._current_page_title}\n"
+                    f"URL: {self._current_url}\n\n"
+                    "Write a very short, friendly 1-sentence greeting (max 15 words) welcoming them to this specific page "
+                    "and asking how you can help them with the tasks on this page. Do not sound robotic."
+                )
+                
+                # We can't import openai_client easily from main, but we can use the livekit openai llm client
+                # Actually, main.py imports openai as `from openai import AsyncOpenAI as openai_client`
+                # But here we can use the python requests module or import openai if available.
+                import openai
+                client = openai.AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+                response = await client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.7,
+                    max_tokens=50
+                )
+                greeting_text = response.choices[0].message.content.strip()
+        except Exception as e:
+            logger.warning(f"Dynamic greeting generation failed: {e}")
+        
+        if not greeting_text:
+            greeting_text = (
+                f"Hello! I'm {self._bot_name}, your {tenant_name} assistant. "
+                "How can I help you today? 👋"
+            )
 
         # ── 2. Always send greeting as a chat text bubble ────────────────────
-        #    Wait briefly so the frontend DataReceived listener is ready before
-        #    we publish — without this the packet can arrive before React mounts.
-        await asyncio.sleep(1.5)
         room = self.session.room_io.room
         message_id = str(uuid.uuid4())
         payload = json.dumps({
