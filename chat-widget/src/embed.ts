@@ -17,7 +17,21 @@ function mountWidget() {
   const tokenUrl = scriptTag?.getAttribute('data-token-url') || 'http://localhost:8080/token';
   const botName = scriptTag?.getAttribute('data-bot-name') || 'Gaply';
   const theme = scriptTag?.getAttribute('data-theme') || 'light';
-  const tenantId = scriptTag?.getAttribute('data-tenant-id') || 'institutes';
+  const tenantId = scriptTag?.getAttribute('data-tenant-id');
+
+  // Automatically inject the CSS file from the same origin as the script
+  if (scriptTag && scriptTag.src) {
+    const scriptUrl = new URL(scriptTag.src);
+    const cssUrl = `${scriptUrl.origin}/style.css`;
+    
+    // Check if it's already injected to prevent duplicates
+    if (!document.querySelector(`link[href="${cssUrl}"]`)) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = cssUrl;
+      document.head.appendChild(link);
+    }
+  }
 
   // Create host element
   const host = document.createElement('div');

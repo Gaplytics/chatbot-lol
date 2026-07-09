@@ -10,7 +10,7 @@ import json
 
 class TokenRequest(BaseModel):
     participant_name: str = "User"
-    tenant_id: str = "institutes"
+    tenant_id: str
     metadata: dict = None
 
 @router.post("")

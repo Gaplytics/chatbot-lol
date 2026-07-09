@@ -41,28 +41,38 @@ def ingest_all(scraped_pages: list[dict] = None):
     
     points = []
     
-    # 1. Ingest manual markdown files
+    # 1. Ingest manual markdown files organized by tenant folders
     knowledge_dir = os.path.join(os.path.dirname(__file__), "knowledge")
-    md_files = glob.glob(os.path.join(knowledge_dir, "*.md"))
     
-    for file_path in md_files:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-            filename = os.path.basename(file_path)
-            
-            for i, chunk in enumerate(chunk_text(content)):
-                # Embed the chunk
-                res = openai_client.embeddings.create(input=chunk, model="text-embedding-3-small")
-                vector = res.data[0].embedding
+    if os.path.exists(knowledge_dir):
+        for tenant_id in os.listdir(knowledge_dir):
+            tenant_path = os.path.join(knowledge_dir, tenant_id)
+            if os.path.isdir(tenant_path):
+                md_files = glob.glob(os.path.join(tenant_path, "*.md"))
                 
-                point_id = str(uuid.uuid4())
-                points.append(
-                    PointStruct(
-                        id=point_id,
-                        vector=vector,
-                        payload={"text": chunk, "source": filename, "type": "manual"}
-                    )
-                )
+                for file_path in md_files:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                        filename = os.path.basename(file_path)
+                        
+                        for i, chunk in enumerate(chunk_text(content)):
+                            # Embed the chunk
+                            res = openai_client.embeddings.create(input=chunk, model="text-embedding-3-small")
+                            vector = res.data[0].embedding
+                            
+                            point_id = str(uuid.uuid4())
+                            points.append(
+                                PointStruct(
+                                    id=point_id,
+                                    vector=vector,
+                                    payload={
+                                        "text": chunk, 
+                                        "source": filename, 
+                                        "type": "manual",
+                                        "tenant_id": tenant_id
+                                    }
+                                )
+                            )
                 
     # 2. Ingest scraped pages (if provided)
     if scraped_pages:

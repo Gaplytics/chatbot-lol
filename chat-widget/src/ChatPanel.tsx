@@ -3,7 +3,7 @@ import { useLiveKit } from './hooks/useLiveKit';
 import { MessageBubble } from './MessageBubble';
 import { VoiceButton } from './VoiceButton';
 import { AudioPlayer } from './AudioPlayer';
-import { Send, Minimize2, Volume2, VolumeX } from 'lucide-react';
+import { Send, Minimize2, Volume2, VolumeX, MessageCircle } from 'lucide-react';
 
 export const ChatPanel = ({ tokenUrl, botName, tenantId, onClose }: any) => {
   const { room, messages, isConnected, isProcessing, sendMessage, sendSettings, selectSuggestion } = useLiveKit(tokenUrl, tenantId);
@@ -34,22 +34,27 @@ export const ChatPanel = ({ tokenUrl, botName, tenantId, onClose }: any) => {
   return (
     <div className="gaply-chat-panel">
       {/* 1. Header Area */}
-      <div className="gaply-header">
+      <div className="gaply-panel-header">
         <div className="gaply-header-info">
-          <div className="gaply-avatar">
-            <span className="gaply-avatar-initial">{botName.charAt(0)}</span>
+          <div className="gaply-bot-avatar">
+            <MessageCircle size={18} />
           </div>
-          <div className="gaply-header-text">
+          <div>
             <h3>{botName}</h3>
-            <span className="gaply-status">
+            <span className="gaply-status-text">
               <span className={`gaply-status-dot ${isConnected ? 'connected' : ''}`}></span>
               {isConnected ? 'Online' : 'Connecting...'}
             </span>
+            <span style={{ marginLeft: "8px", fontSize: "10px", background: "#ff4757", color: "white", padding: "2px 6px", borderRadius: "10px" }}>
+              TENANT: {tenantId}
+            </span>
           </div>
         </div>
-        <button onClick={onClose} className="gaply-close-btn" title="Minimize Chat">
-          <Minimize2 size={16} />
-        </button>
+        <div className="gaply-header-actions">
+          <button onClick={onClose} className="gaply-close-btn" title="Minimize Chat">
+            <Minimize2 size={16} />
+          </button>
+        </div>
       </div>
 
       {/* 2. Interactive Settings Sub-Bar */}

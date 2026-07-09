@@ -165,29 +165,31 @@ Add **two lines** anywhere in your HTML:
 
 ```html
 <link rel="stylesheet" href="http://localhost:8080/style.css">
-<script src="http://localhost:8080/embed.iife.js"></script>
-<script>
-  GaplyWidget.init({
-    tokenUrl: "http://localhost:8080/token",
-    botName: "Gaply",
-    primaryColor: "#6C63FF",   // optional: brand colour
-    theme: "light"             // optional: "light" or "dark"
-  });
-</script>
+<script 
+  src="http://localhost:8080/embed.iife.js"
+  data-token-url="http://localhost:8080/token"
+  data-tenant-id="institutes"
+  data-bot-name="Gaply"
+  data-theme="light"
+></script>
 ```
 
-### For production (replace with your domain):
+> **CRITICAL**: The `data-tenant-id` attribute is strictly required! It tells the microservice which knowledge base and personality prompt to load (e.g., `"institutes"`, `"enterprises"`, or `"gaply2.0"`). If omitted or invalid, the bot will return a critical error.
 
-```html
-<link rel="stylesheet" href="https://chat.yourdomain.com/style.css">
-<script src="https://chat.yourdomain.com/embed.iife.js"></script>
-<script>
-  GaplyWidget.init({
-    tokenUrl: "https://chat.yourdomain.com/token",
-    botName: "Gaply",
-    primaryColor: "#6C63FF"
-  });
-</script>
+### For production (Next.js Example):
+
+```tsx
+import Script from "next/script";
+
+// Inside your layout.tsx or page.tsx
+<Script 
+  src="https://chat.yourdomain.com/embed.iife.js" 
+  data-token-url="https://chat.yourdomain.com/token" 
+  data-bot-name="Gaply" 
+  data-tenant-id="institutes" 
+  data-theme="light"
+  strategy="afterInteractive" 
+/>
 ```
 
 ### Allowing your website domain (CORS)
@@ -223,20 +225,21 @@ docker-compose up -d token-api
 
 ## Giving the Bot Knowledge (RAG)
 
-The bot searches a vector database (Qdrant) before answering. Without knowledge loaded it says *"I don't have that information right now."*
+The bot searches a vector database (Qdrant) before answering. It uses absolute strict data isolation based on the `tenant_id`. 
 
 ### Adding Knowledge Manually
 
-1. Place your knowledge files (Markdown format) in the `agent-worker/knowledge/` directory. For example, edit the existing `faq.md`.
-2. Run the ingestion script inside the agent container to embed and upload the files to Qdrant:
+1. Create a folder inside `agent-worker/knowledge/` named exactly after your `tenant_id` (e.g., `agent-worker/knowledge/institutes/`).
+2. Place your knowledge files (Markdown format) inside that specific folder.
+3. Run the ingestion script inside the agent container to embed and upload the files to Qdrant:
 
 ```bash
 docker exec -it gaply-chatbot-agent-worker-1 python ingest.py
 ```
 
-This reads the markdown files, chunks the content, embeds it with OpenAI `text-embedding-3-small`, and stores it in Qdrant.
+This script will automatically iterate through all your tenant folders, embed the markdown files, and attach `{ "tenant_id": "..." }` metadata to every vector. This ensures Gaplytiq Institutes users can never hallucinate or see Enterprise data.
 
-> **Reminder:** Every time you add/edit content in `agent-worker/knowledge/faq.md`, you MUST re-run `docker exec gaply-chatbot-agent-worker-1 python ingest.py` to update the knowledge base.
+> **Reminder:** Every time you add/edit content in your knowledge folders, you MUST re-run `docker exec gaply-chatbot-agent-worker-1 python ingest.py` to update the database.
 
 *(Note: The `/admin/scrape` and `/admin/ingest` REST endpoints in the Token API are currently placeholder stubs for future Redis PubSub architecture. Use the `docker exec` method above for now.)*
 
@@ -259,13 +262,17 @@ Full list: [Deepgram TTS Models](https://developers.deepgram.com/docs/tts-models
 
 ### Personality and rules
 
-Edit `agent-worker/prompts.py` — the `SYSTEM_PROMPT_TEMPLATE` string:
+System prompts are managed via markdown files in the `agent-worker/prompts/` directory:
 
-- **Rule 2** — fallback message when no knowledge is found
-- **Rule 6/7** — voice vs text formatting style
-- **Rule 8** — suggestion chips behaviour
+- **`base.md`**: Contains the strict, universal rules (like tool calling, voice formatting, refusal instructions) applied to all bots.
+- **`[tenant_id].md`** (e.g., `institutes.md`, `enterprises.md`): Contains the highly specific persona and behavior instructions for that specific product.
 
-Rebuild after editing:
+To add a new chatbot for a new website:
+1. Create `agent-worker/prompts/new_tenant.md` and define its persona.
+2. Embed the widget on the website with `data-tenant-id="new_tenant"`.
+3. The backend will automatically merge `base.md` + `new_tenant.md` to form the bot's brain.
+
+Rebuild the agent container after editing any prompts:
 
 ```bash
 docker-compose up -d --build agent-worker

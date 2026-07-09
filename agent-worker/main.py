@@ -103,7 +103,7 @@ async def entrypoint(ctx: JobContext):
     bot_name = os.getenv("BOT_NAME", "Gaply")
     logger.info(f"Starting agent '{bot_name}' in room {ctx.room.name}.")
 
-    tenant_id = "institutes" # Default fallback
+    tenant_id = "CRITICAL_ERROR_NO_TENANT_ID" # Loud error fallback
     # Find the user participant and extract the tenant_id from their secure token metadata
     for p in ctx.room.remote_participants.values():
         if p.metadata:

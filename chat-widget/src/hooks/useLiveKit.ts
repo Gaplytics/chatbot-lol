@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Room, RoomEvent } from 'livekit-client';
 
-export function useLiveKit(tokenUrl: string, tenantId: string = "institutes") {
+export function useLiveKit(tokenUrl: string, tenantId: string | null) {
   const [room, setRoom] = useState<Room | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(false);
