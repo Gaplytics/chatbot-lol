@@ -36,6 +36,8 @@ export const ChatPanel = ({ tokenUrl, botName, tenantId, onClose }: any) => {
      window.location.hostname === '127.0.0.1' || 
      window.location.hostname.startsWith('192.168.'));
 
+  const hasGreeting = messages.some(m => m.sender === 'bot');
+
   return (
     <div className="gaply-chat-panel">
       {/* 1. Header Area */}
@@ -64,79 +66,92 @@ export const ChatPanel = ({ tokenUrl, botName, tenantId, onClose }: any) => {
         </div>
       </div>
 
-      {/* 2. Interactive Settings Sub-Bar */}
-      <div className="gaply-control-bar">
-        <div className="gaply-control-label-wrapper">
-          {botVoiceOutput ? <Volume2 size={16} /> : <VolumeX size={16} />}
-          <span className="gaply-control-label">Bot Voice Output</span>
-        </div>
-        <div className="gaply-voice-toggle-container">
-          <label className="gaply-switch" title={botVoiceOutput ? "Click to mute bot speaking" : "Click to let bot speak answers"}>
-            <input 
-              type="checkbox" 
-              checked={botVoiceOutput} 
-              onChange={(e) => handleVoiceOutputToggle(e.target.checked)} 
-              disabled={!isConnected || isProcessing}
-            />
-            <span className="gaply-slider"></span>
-          </label>
-          <span className="gaply-control-status">{botVoiceOutput ? "ON" : "OFF"}</span>
-        </div>
-      </div>
-
-      {/* 3. Messages List Area */}
-      <div className="gaply-messages">
-        {messages.map((m, i) => {
-          // A bot message's suggestions are active if it's the very last message in the array
-          const isActive = m.sender === 'bot' && i === messages.length - 1;
-          
-          return (
-            <MessageBubble 
-              key={m.id || i} 
-              text={m.text} 
-              sender={m.sender} 
-              suggestions={m.suggestions}
-              selectedSuggestion={m.selectedSuggestion}
-              isActiveSuggestions={isActive}
-              onSelectSuggestion={(text) => selectSuggestion(m.id || `msg-${i}`, text, botVoiceOutput)}
-            />
-          );
-        })}
-        {isProcessing && (
-          <div className="gaply-message-wrapper gaply-message-bot">
-             <div className="gaply-typing-indicator">
-               <span></span><span></span><span></span>
-             </div>
+      {!hasGreeting ? (
+        <div className="gaply-loading-view">
+          <div className="gaply-loading-spinner-wrapper">
+            <div className="gaply-loading-spinner-outer"></div>
+            <div className="gaply-loading-spinner-inner"></div>
           </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* 4. Bottom Input and Voice Trigger Panel */}
-      <div className="gaply-input-container">
-        <div className="gaply-input-area">
-          <input 
-            value={inputText} 
-            onChange={e => setInputText(e.target.value)} 
-            onKeyDown={e => e.key === 'Enter' && handleSend()}
-            placeholder={isProcessing ? "Thinking..." : "Type your message..."}
-            disabled={!isConnected || isProcessing}
-          />
-          <button 
-            onClick={handleSend} 
-            disabled={!isConnected || isProcessing || !inputText.trim()} 
-            className="gaply-send-btn"
-            title="Send Message"
-          >
-            <Send size={16} />
-          </button>
-          
-          <div className="gaply-divider-line"></div>
-          
-          {/* Voice Input Trigger */}
-          <VoiceButton room={room} isConnected={isConnected} disabled={isProcessing} />
+          <h4>Syncing Context</h4>
+          <p>Please wait a moment while your coach connects and prepares your dashboard...</p>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* 2. Interactive Settings Sub-Bar */}
+          <div className="gaply-control-bar">
+            <div className="gaply-control-label-wrapper">
+              {botVoiceOutput ? <Volume2 size={16} /> : <VolumeX size={16} />}
+              <span className="gaply-control-label">Bot Voice Output</span>
+            </div>
+            <div className="gaply-voice-toggle-container">
+              <label className="gaply-switch" title={botVoiceOutput ? "Click to mute bot speaking" : "Click to let bot speak answers"}>
+                <input 
+                  type="checkbox" 
+                  checked={botVoiceOutput} 
+                  onChange={(e) => handleVoiceOutputToggle(e.target.checked)} 
+                  disabled={!isConnected || isProcessing}
+                />
+                <span className="gaply-slider"></span>
+              </label>
+              <span className="gaply-control-status">{botVoiceOutput ? "ON" : "OFF"}</span>
+            </div>
+          </div>
+
+          {/* 3. Messages List Area */}
+          <div className="gaply-messages">
+            {messages.map((m, i) => {
+              // A bot message's suggestions are active if it's the very last message in the array
+              const isActive = m.sender === 'bot' && i === messages.length - 1;
+              
+              return (
+                <MessageBubble 
+                  key={m.id || i} 
+                  text={m.text} 
+                  sender={m.sender} 
+                  suggestions={m.suggestions}
+                  selectedSuggestion={m.selectedSuggestion}
+                  isActiveSuggestions={isActive}
+                  onSelectSuggestion={(text) => selectSuggestion(m.id || `msg-${i}`, text, botVoiceOutput)}
+                />
+              );
+            })}
+            {isProcessing && (
+              <div className="gaply-message-wrapper gaply-message-bot">
+                 <div className="gaply-typing-indicator">
+                   <span></span><span></span><span></span>
+                 </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* 4. Bottom Input and Voice Trigger Panel */}
+          <div className="gaply-input-container">
+            <div className="gaply-input-area">
+              <input 
+                value={inputText} 
+                onChange={e => setInputText(e.target.value)} 
+                onKeyDown={e => e.key === 'Enter' && handleSend()}
+                placeholder={isProcessing ? "Thinking..." : "Type your message..."}
+                disabled={!isConnected || isProcessing}
+              />
+              <button 
+                onClick={handleSend} 
+                disabled={!isConnected || isProcessing || !inputText.trim()} 
+                className="gaply-send-btn"
+                title="Send Message"
+              >
+                <Send size={16} />
+              </button>
+              
+              <div className="gaply-divider-line"></div>
+              
+              {/* Voice Input Trigger */}
+              <VoiceButton room={room} isConnected={isConnected} disabled={isProcessing} />
+            </div>
+          </div>
+        </>
+      )}
       
       {room && <AudioPlayer room={room} isMuted={!botVoiceOutput} />}
     </div>
