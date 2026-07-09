@@ -141,5 +141,16 @@ export function useLiveKit(tokenUrl: string) {
     }
   }, [room, isConnected]);
 
-  return { room, messages, suggestions, isConnected, isProcessing, sendMessage };
+  /** Sends a settings update to the agent backend. */
+  const sendSettings = useCallback(async (voiceOutputEnabled: boolean) => {
+    if (room && isConnected) {
+      const payload = new TextEncoder().encode(JSON.stringify({
+        type: 'settings',
+        voiceOutputEnabled,
+      }));
+      await room.localParticipant.publishData(payload, { reliable: true });
+    }
+  }, [room, isConnected]);
+
+  return { room, messages, suggestions, isConnected, isProcessing, sendMessage, sendSettings };
 }

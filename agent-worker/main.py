@@ -101,11 +101,19 @@ async def entrypoint(ctx: JobContext):
     session = AgentSession()
     gaply_agent = GaplyAgent()
 
+    # Wire up the text-only reply callback so agent.py can call it for mic input
+    # when voice output is OFF (avoids unnecessary Deepgram TTS calls)
+    gaply_agent._text_reply_callback = lambda text: _text_only_reply(text, gaply_agent, ctx.room)
+
+    # Per-room setting: matches the UI default (OFF).
+    # Updated by the settings data-channel message whenever the user toggles.
+    voice_output_enabled = {"value": False}
+
     # -----------------------------------------------------------------------
-    # Handle typed text from the widget's data channel.
-    # Payload format: {"type": "chat", "text": "...", "voiceResponse": bool}
-    #   voiceResponse=false (default) → text-only LLM reply
-    #   voiceResponse=true           → full voice pipeline (TTS + text)
+    # Handle typed text AND settings updates from the widget's data channel.
+    # Payload formats:
+    #   {"type": "chat", "text": "...", "voiceResponse": bool}
+    #   {"type": "settings", "voiceOutputEnabled": bool}
     # -----------------------------------------------------------------------
     @ctx.room.on("data_received")
     def on_data_received(data_packet: rtc.DataPacket):
@@ -122,14 +130,23 @@ async def entrypoint(ctx: JobContext):
 
             msg_type = parsed.get("type", "")
 
+            if msg_type == "settings":
+                # User toggled "Bot Voice Output" in the UI
+                enabled = bool(parsed.get("voiceOutputEnabled", True))
+                voice_output_enabled["value"] = enabled
+                gaply_agent.set_voice_output(enabled)
+                logger.info(f"Voice output set to: {enabled}")
+                return
+
             if msg_type == "chat":
                 text = parsed.get("text", "").strip()
-                voice_response = parsed.get("voiceResponse", False)
+                # honour the per-message flag BUT also respect the global toggle
+                voice_response = parsed.get("voiceResponse", False) and voice_output_enabled["value"]
 
                 if not text:
                     return
 
-                logger.info(f"Received typed message (voiceResponse={voice_response}): {text!r}")
+                logger.info(f"Received typed message (voiceOutput={voice_output_enabled['value']}, voiceResponse={voice_response}): {text!r}")
 
                 if voice_response:
                     # Full pipeline: LLM + TTS, transcription shows in widget

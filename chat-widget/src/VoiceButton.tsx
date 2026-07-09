@@ -26,9 +26,16 @@ export const VoiceButton = ({ room, isConnected, disabled }: { room: Room | null
       className={`gaply-voice-btn ${isMicOn ? 'active' : ''}`} 
       onClick={toggleMic}
       disabled={!isConnected || disabled}
-      title={isMicOn ? "Turn off mic" : "Turn on mic"}
+      title={isMicOn ? "Mute Microphone" : "Voice Input (Speak to Agent)"}
     >
-      {isMicOn ? <Mic size={20} color="red" /> : <MicOff size={20} />}
+      {isMicOn ? (
+        <span className="gaply-mic-active-wrapper">
+          <Mic size={18} color="#ffffff" />
+          <span className="gaply-mic-pulse-ring"></span>
+        </span>
+      ) : (
+        <MicOff size={18} />
+      )}
     </button>
   );
 };

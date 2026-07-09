@@ -6,27 +6,34 @@ import { VoiceButton } from './VoiceButton';
 import { AudioPlayer } from './AudioPlayer';
 
 export const ChatPanel = ({ tokenUrl, botName, onClose }: any) => {
-  const { room, messages, suggestions, isConnected, isProcessing, sendMessage } = useLiveKit(tokenUrl);
+  const { room, messages, suggestions, isConnected, isProcessing, sendMessage, sendSettings } = useLiveKit(tokenUrl);
   const [inputText, setInputText] = useState("");
-  // Voice response toggle: when ON, typed messages also trigger TTS
-  const [voiceResponse, setVoiceResponse] = useState(false);
+  
+  // Voice output toggle: Determines if bot answers with audio (also sent to backend to avoid unnecessary TTS)
+  const [botVoiceOutput, setBotVoiceOutput] = useState(false);
+  
+  const handleVoiceOutputToggle = (enabled: boolean) => {
+    setBotVoiceOutput(enabled);
+    sendSettings(enabled); // notify backend — skips Deepgram TTS when off
+  };
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when messages update
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isProcessing]);
 
   const handleSend = () => {
     if (inputText.trim() && !isProcessing) {
-      sendMessage(inputText.trim(), voiceResponse);
+      sendMessage(inputText.trim(), botVoiceOutput);
       setInputText("");
     }
   };
 
   return (
     <div className="gaply-chat-panel">
+      {/* 1. Header Area */}
       <div className="gaply-header">
         <div className="gaply-header-info">
           <div className="gaply-avatar">
@@ -40,8 +47,25 @@ export const ChatPanel = ({ tokenUrl, botName, onClose }: any) => {
             </span>
           </div>
         </div>
-        <button onClick={onClose} className="gaply-close-btn">&times;</button>
+        <button onClick={onClose} className="gaply-close-btn" title="Minimize Chat">&times;</button>
       </div>
+
+      {/* 2. Interactive Settings Sub-Bar */}
+      <div className="gaply-control-bar">
+        <span className="gaply-control-label">Bot Voice Output</span>
+        <label className="gaply-switch" title={botVoiceOutput ? "Click to mute bot speaking" : "Click to let bot speak answers"}>
+          <input 
+            type="checkbox" 
+            checked={botVoiceOutput} 
+            onChange={(e) => handleVoiceOutputToggle(e.target.checked)} 
+            disabled={!isConnected || isProcessing}
+          />
+          <span className="gaply-slider round"></span>
+        </label>
+        <span className="gaply-control-status">{botVoiceOutput ? "ON 🔊" : "OFF 🔇"}</span>
+      </div>
+
+      {/* 3. Messages List Area */}
       <div className="gaply-messages">
         {messages.map((m, i) => (
           <MessageBubble key={m.id || i} text={m.text} sender={m.sender} />
@@ -53,39 +77,44 @@ export const ChatPanel = ({ tokenUrl, botName, onClose }: any) => {
              </div>
           </div>
         )}
+        
+        {/* Suggestion Chips formatted as Multiple Choice Options */}
         {!isProcessing && suggestions.length > 0 && (
-          <SuggestionChips chips={suggestions} onSelect={(text) => sendMessage(text, voiceResponse)} />
+          <div className="gaply-mcq-container">
+            <div className="gaply-mcq-header">Select an option:</div>
+            <SuggestionChips chips={suggestions} onSelect={(text) => sendMessage(text, botVoiceOutput)} />
+          </div>
         )}
         <div ref={messagesEndRef} />
       </div>
-      <div className="gaply-input-area">
-        <input 
-          value={inputText} 
-          onChange={e => setInputText(e.target.value)} 
-          onKeyDown={e => e.key === 'Enter' && handleSend()}
-          placeholder={isProcessing ? "AI is processing..." : "Type your message..."}
-          disabled={!isConnected || isProcessing}
-        />
-        <button 
-          onClick={handleSend} 
-          disabled={!isConnected || isProcessing || !inputText.trim()} 
-          className="gaply-send-btn"
-        >
-          Send
-        </button>
-        {/* Voice-response toggle: controls whether text replies also use TTS */}
-        <button
-          className={`gaply-tts-toggle-btn ${voiceResponse ? 'active' : ''}`}
-          onClick={() => setVoiceResponse(v => !v)}
-          disabled={!isConnected || isProcessing}
-          title={voiceResponse ? "Voice response ON – click to disable" : "Voice response OFF – click to enable"}
-        >
-          {voiceResponse ? '🔊' : '🔇'}
-        </button>
-        {/* Mic button: toggles the user's microphone for voice input */}
-        <VoiceButton room={room} isConnected={isConnected} disabled={isProcessing} />
+
+      {/* 4. Bottom Input and Voice Trigger Panel */}
+      <div className="gaply-input-container">
+        <div className="gaply-input-area">
+          <input 
+            value={inputText} 
+            onChange={e => setInputText(e.target.value)} 
+            onKeyDown={e => e.key === 'Enter' && handleSend()}
+            placeholder={isProcessing ? "Thinking..." : "Type your message..."}
+            disabled={!isConnected || isProcessing}
+          />
+          <button 
+            onClick={handleSend} 
+            disabled={!isConnected || isProcessing || !inputText.trim()} 
+            className="gaply-send-btn"
+            title="Send Message"
+          >
+            Send
+          </button>
+          
+          <div className="gaply-divider-line"></div>
+          
+          {/* Voice Input Trigger */}
+          <VoiceButton room={room} isConnected={isConnected} disabled={isProcessing} />
+        </div>
       </div>
-      {room && <AudioPlayer room={room} />}
+      
+      {room && <AudioPlayer room={room} isMuted={!botVoiceOutput} />}
     </div>
   );
 };
