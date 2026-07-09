@@ -2,14 +2,12 @@ import logging
 import os
 import json
 import asyncio
-import uuid
 from dotenv import load_dotenv
 from livekit import rtc
 from livekit.agents import cli, WorkerOptions, JobContext
 from livekit.agents.voice import AgentSession
 import openai as openai_client
 from agent import GaplyAgent
-from prompts import get_system_prompt
 
 load_dotenv()
 
@@ -95,86 +93,6 @@ async def _generate_suggestions(last_reply: str, agent: GaplyAgent, room: rtc.Ro
         logger.warning(f"Suggestion generation skipped: {e}")
 
 
-
-# ---------------------------------------------------------------------------
-# Text-only reply (voice output OFF)
-# ---------------------------------------------------------------------------
-async def _text_only_reply(text: str, agent: GaplyAgent, room: rtc.Room):
-    """
-    Used when voice output is OFF (both typed and mic input).
-    - Reads shared conversation history for memory continuity across modes.
-    - Streams the reply via text_stream data packets.
-    - Updates shared history with the user + assistant turns.
-    - Generates suggestion chips after the reply.
-    """
-    try:
-        # RAG retrieval
-        context = await agent._retriever.retrieve(text)
-        history_block = agent._build_history_block()
-        system_prompt = get_system_prompt(agent._bot_name, context) + history_block
-        logger.info(f"Text-only RAG retrieved ({len(context)} chars), history turns={len(agent._conversation_history)}")
-
-        # Build messages with shared conversation history
-        messages = [{"role": "system", "content": system_prompt}]
-        for msg in agent._conversation_history[-20:]:  # last 10 turns for context
-            messages.append({"role": msg["role"], "content": msg["content"]})
-        messages.append({"role": "user", "content": text})
-
-        client = openai_client.AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        stream = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            temperature=0.0,
-            stream=True,
-        )
-
-        message_id = str(uuid.uuid4())
-        full_reply = ""
-
-        async for chunk in stream:
-            chunk_text = chunk.choices[0].delta.content
-            if chunk_text:
-                full_reply += chunk_text
-                payload = json.dumps({
-                    "type": "text_stream",
-                    "id": message_id,
-                    "text": chunk_text,
-                    "final": False
-                }).encode("utf-8")
-                await room.local_participant.publish_data(payload, reliable=True)
-
-        # Final marker
-        payload = json.dumps({
-            "type": "text_stream",
-            "id": message_id,
-            "text": "",
-            "final": True
-        }).encode("utf-8")
-        await room.local_participant.publish_data(payload, reliable=True)
-        logger.info(f"Text-only streaming reply sent ({len(full_reply)} chars)")
-
-        # Update shared history with both turns
-        if text:
-            agent.add_to_history("user", text)
-        if full_reply:
-            agent.add_to_history("assistant", full_reply)
-
-        # Generate follow-up suggestions
-        if full_reply:
-            asyncio.ensure_future(_generate_suggestions(full_reply, agent, room))
-
-    except Exception as e:
-        logger.error(f"Error in text-only reply: {e}")
-        error_id = str(uuid.uuid4())
-        try:
-            payload = json.dumps({"type": "text_stream", "id": error_id, "text": "Sorry, I couldn't process that right now.", "final": False}).encode("utf-8")
-            await room.local_participant.publish_data(payload, reliable=True)
-            payload = json.dumps({"type": "text_stream", "id": error_id, "text": "", "final": True}).encode("utf-8")
-            await room.local_participant.publish_data(payload, reliable=True)
-        except Exception:
-            pass
-
-
 # ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
@@ -188,12 +106,23 @@ async def entrypoint(ctx: JobContext):
     session = AgentSession()
     gaply_agent = GaplyAgent()
 
-    # Wire callbacks into the agent
-    gaply_agent._text_reply_callback = lambda text: _text_only_reply(text, gaply_agent, ctx.room)
+    # Wire suggestions callback into the agent.
+    # NOTE: there is no more _text_reply_callback — every chat message (typed
+    # or spoken) now flows through session.generate_reply() -> GaplyAgent's
+    # unified llm_node, so tools and text streaming behave identically
+    # whether Voice Output is ON or OFF. Voice Output only gates tts_node.
     gaply_agent._suggestions_callback = lambda reply: _generate_suggestions(reply, gaply_agent, ctx.room)
 
-    # Per-room voice output state — starts OFF to match UI default
-    voice_output_enabled = {"value": False}
+    async def _safe_generate_reply(text: str):
+        """
+        Wraps session.generate_reply so exceptions are actually logged.
+        asyncio.ensure_future() on its own swallows exceptions until GC —
+        this makes failures visible immediately in the logs.
+        """
+        try:
+            await session.generate_reply(user_input=text)
+        except Exception:
+            logger.exception(f"generate_reply failed for input: {text!r}")
 
     @ctx.room.on("data_received")
     def on_data_received(data_packet: rtc.DataPacket):
@@ -205,32 +134,30 @@ async def entrypoint(ctx: JobContext):
             try:
                 parsed = json.loads(raw)
             except json.JSONDecodeError:
-                parsed = {"type": "chat", "text": raw, "voiceResponse": True}
+                parsed = {"type": "chat", "text": raw}
 
             msg_type = parsed.get("type", "")
 
             if msg_type == "settings":
                 enabled = bool(parsed.get("voiceOutputEnabled", True))
-                voice_output_enabled["value"] = enabled
                 gaply_agent.set_voice_output(enabled)
                 logger.info(f"Voice output set to: {enabled}")
                 return
 
             if msg_type == "chat":
                 text = parsed.get("text", "").strip()
-                voice_response = parsed.get("voiceResponse", False) and voice_output_enabled["value"]
-
                 if not text:
                     return
 
-                logger.info(f"Received typed message (voiceOutput={voice_output_enabled['value']}, voiceResponse={voice_response}): {text!r}")
+                logger.info(f"Received typed message: {text!r}")
 
-                if voice_response:
-                    # Full pipeline: LLM + TTS
-                    asyncio.ensure_future(session.generate_reply(user_input=text))
-                else:
-                    # Text-only streaming (uses shared history)
-                    asyncio.ensure_future(_text_only_reply(text, gaply_agent, ctx.room))
+                # Single unified pipeline for typed AND spoken input.
+                # GaplyAgent.llm_node always runs (tools always available)
+                # and streams text_stream packets; tts_node internally
+                # decides whether to actually speak, based on
+                # gaply_agent._voice_output_enabled. No duplicate LLM call,
+                # no wasted tokens.
+                asyncio.ensure_future(_safe_generate_reply(text))
 
         except Exception as e:
             logger.error(f"Error in data_received handler: {e}")

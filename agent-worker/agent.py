@@ -18,8 +18,12 @@ class GaplyAgent(Agent):
     """
     Gaplytiq Institute chat agent.
 
-    Shared memory works across voice ON/OFF modes via _conversation_history,
-    which is injected into the system prompt on every turn.
+    Unified pipeline: every turn (voice ON or OFF) goes through the same
+    llm_node, so tools (GaplytiqAPI) are always available regardless of
+    voice output mode. Voice output is gated ONLY at tts_node — that's the
+    single on/off switch. Shared memory works across voice ON/OFF modes via
+    _conversation_history, which is injected into the system prompt on every
+    turn.
     """
 
     def __init__(self):
@@ -41,11 +45,11 @@ class GaplyAgent(Agent):
         self._retriever = RAGRetriever()
         self._bot_name = bot_name
 
-        # Starts OFF to match the UI default.
+        # Starts OFF to match the UI default. This ONLY gates tts_node now —
+        # it does not affect which LLM path is used or whether tools work.
         self._voice_output_enabled: bool = False
 
-        # Callbacks wired by main.py
-        self._text_reply_callback: Optional[Callable] = None
+        # Callback wired by main.py (suggestion chip generation)
         self._suggestions_callback: Optional[Callable] = None
 
         # Shared conversation history — preserved across voice ON/OFF mode switches
@@ -83,31 +87,70 @@ class GaplyAgent(Agent):
 
     async def llm_node(self, *args, **kwargs) -> AsyncIterable[str]:
         """
-        Voice OFF → skip pipeline LLM call entirely (text_reply_callback handles it).
-        Voice ON  → run normal LLM, capture reply for shared history + suggestions.
-        """
-        if not self._voice_output_enabled:
-            return  # Yield nothing → tts_node gets nothing too
+        Single unified LLM path for BOTH voice ON and voice OFF.
 
+        - Always runs the tool-enabled pipeline LLM (self.llm, with GaplytiqAPI
+          tools attached), so website-control tools work in both modes.
+        - Always streams text_stream data packets to the frontend chat bubble,
+          replacing the old duplicated streaming logic that used to live in
+          main.py's _text_only_reply.
+        - Always yields the original ChatChunk objects onward so tts_node can
+          speak them — tts_node itself decides (based on
+          self._voice_output_enabled) whether to actually synthesize audio.
+        """
+        room = self.session.room_io.room
+        message_id = str(uuid.uuid4())
         full_reply = ""
-        async for chunk in Agent.default.llm_node(self, *args, **kwargs):
-            # Extract text from ChatChunk for history; yield the original chunk object
+
+        try:
+            async for chunk in Agent.default.llm_node(self, *args, **kwargs):
+                try:
+                    content = None
+                    if isinstance(chunk, str):
+                        content = chunk
+                    elif chunk is not None and getattr(chunk, "delta", None) is not None:
+                        content = chunk.delta.content
+                    if content:
+                        full_reply += content
+                        payload = json.dumps({
+                            "type": "text_stream",
+                            "id": message_id,
+                            "text": content,
+                            "final": False
+                        }).encode("utf-8")
+                        await room.local_participant.publish_data(payload, reliable=True)
+                except Exception:
+                    logger.exception("Error extracting/publishing text delta from chunk")
+                yield chunk  # Always yield original ChatChunk — pipeline (and TTS) needs this type
+        except Exception:
+            logger.exception("llm_node: underlying LLM call failed")
+            raise
+        finally:
+            # Final marker so frontend knows the bubble is complete, even on error
+            payload = json.dumps({
+                "type": "text_stream",
+                "id": message_id,
+                "text": "",
+                "final": True
+            }).encode("utf-8")
             try:
-                if hasattr(chunk, 'choices') and chunk.choices:
-                    delta = chunk.choices[0].delta
-                    if hasattr(delta, 'content') and delta.content:
-                        full_reply += delta.content
+                await room.local_participant.publish_data(payload, reliable=True)
             except Exception:
-                pass
-            yield chunk  # Always yield original ChatChunk — pipeline needs this type
+                logger.exception("Failed to publish final text_stream marker")
 
         if full_reply:
             self.add_to_history("assistant", full_reply)
-            logger.info(f"Voice LLM reply captured ({len(full_reply)} chars)")
+            logger.info(f"LLM reply captured ({len(full_reply)} chars)")
             if self._suggestions_callback:
                 asyncio.ensure_future(self._suggestions_callback(full_reply))
+        else:
+            logger.warning("llm_node completed with EMPTY reply — check LLM/tool call above for errors")
 
     async def tts_node(self, input: AsyncIterable[str], model_settings) -> AsyncIterable[bytes]:
+        """
+        The ONLY place voice output is gated. When OFF, we drain the input
+        stream (so upstream doesn't block) and produce no audio frames.
+        """
         if not self._voice_output_enabled:
             async for _ in input:
                 pass
@@ -174,7 +217,7 @@ class GaplyAgent(Agent):
     async def on_user_turn_completed(
         self, turn_ctx: llm.ChatContext, new_message: llm.ChatMessage
     ) -> None:
-        # Extract transcribed user text from mic input
+        # Extract transcribed/typed user text
         user_text = ""
         if isinstance(new_message.content, str):
             user_text = new_message.content
@@ -197,12 +240,8 @@ class GaplyAgent(Agent):
         updated_prompt = get_system_prompt(self._bot_name, context) + history_block
         await self.update_instructions(updated_prompt)
 
+        # Unconditionally track the user turn — llm_node tracks the assistant
+        # reply on the way out, for BOTH voice ON and OFF, since both now
+        # flow through the same pipeline.
         if user_text:
-            if self._voice_output_enabled:
-                # Voice ON: track user turn now; llm_node will track assistant reply
-                self.add_to_history("user", user_text)
-            else:
-                # Voice OFF: text_reply_callback handles both user + assistant history
-                if self._text_reply_callback:
-                    logger.info("Voice OFF — routing mic input to text-only reply")
-                    asyncio.ensure_future(self._text_reply_callback(user_text))
+            self.add_to_history("user", user_text)
