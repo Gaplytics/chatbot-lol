@@ -31,22 +31,29 @@ export const ChatPanel = ({ tokenUrl, botName, tenantId, onClose }: any) => {
     }
   };
 
+  const isDev = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || 
+     window.location.hostname === '127.0.0.1' || 
+     window.location.hostname.startsWith('192.168.'));
+
   return (
     <div className="gaply-chat-panel">
       {/* 1. Header Area */}
-      <div className="gaply-panel-header">
+      <div className="gaply-header">
         <div className="gaply-header-info">
-          <div className="gaply-bot-avatar">
+          <div className="gaply-avatar">
             <MessageCircle size={18} />
           </div>
-          <div>
+          <div className="gaply-header-text">
             <h3>{botName}</h3>
-            <span className="gaply-status-text">
+            <span className="gaply-status">
               <span className={`gaply-status-dot ${isConnected ? 'connected' : ''}`}></span>
               {isConnected ? 'Online' : 'Connecting...'}
-            </span>
-            <span style={{ marginLeft: "8px", fontSize: "10px", background: "#ff4757", color: "white", padding: "2px 6px", borderRadius: "10px" }}>
-              TENANT: {tenantId}
+              {isDev && (
+                <span style={{ marginLeft: "8px", fontSize: "10px", background: "#ff4757", color: "white", padding: "2px 6px", borderRadius: "10px" }}>
+                  DEV: {tenantId}
+                </span>
+              )}
             </span>
           </div>
         </div>
