@@ -197,10 +197,14 @@ class GaplyAgent(Agent):
                 prompt = (
                     f"You are {self._bot_name}, a friendly AI assistant for {tenant_name}.\n"
                     f"The user has just opened the chat bubble on this specific page:\n"
-                    f"Title: {self._current_page_title}\n"
-                    f"URL: {self._current_url}\n\n"
-                    "Write a very short, friendly 1-sentence greeting (max 15 words) welcoming them to this specific page "
-                    "and asking how you can help them with the tasks on this page. Do not sound robotic."
+                    f"Page Title: {self._current_page_title}\n"
+                    f"URL Path: {self._current_url}\n\n"
+                    "Write a very short, friendly 1-sentence greeting (max 12 words). "
+                    "CRITICAL RULES: \n"
+                    "1. IGNORE the generic 'Page Title' mostly. Look at the URL Path to figure out where they are (e.g., /student/wallet = Wallet, /student/dashboard = Dashboard, /student/issues = Help & Support).\n"
+                    "2. Greet them specifically based on that URL Path (e.g. if on /wallet say 'Need help checking your wallet balance?').\n"
+                    "3. DO NOT repeat the page title literally.\n"
+                    "4. Sound like a helpful human coach, very conversational and casual."
                 )
                 
                 # We can't import openai_client easily from main, but we can use the livekit openai llm client
