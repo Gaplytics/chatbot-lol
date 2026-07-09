@@ -236,6 +236,8 @@ docker exec -it gaply-chatbot-agent-worker-1 python ingest.py
 
 This reads the markdown files, chunks the content, embeds it with OpenAI `text-embedding-3-small`, and stores it in Qdrant.
 
+> **Reminder:** Every time you add/edit content in `agent-worker/knowledge/faq.md`, you MUST re-run `docker exec gaply-chatbot-agent-worker-1 python ingest.py` to update the knowledge base.
+
 *(Note: The `/admin/scrape` and `/admin/ingest` REST endpoints in the Token API are currently placeholder stubs for future Redis PubSub architecture. Use the `docker exec` method above for now.)*
 
 ---

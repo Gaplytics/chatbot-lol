@@ -51,9 +51,10 @@ services:
     image: qdrant/qdrant:latest
     restart: always
     networks: [gaply-net]
+    ports:
+      - "6333:6333"
     volumes:
       - qdrant-data:/qdrant/storage
-    # Not exposed to host — only token-api and agent-worker access it internally
 
   # === APPLICATION SERVICES ===
   token-api:

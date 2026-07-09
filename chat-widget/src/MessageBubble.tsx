@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 import { SuggestionChips } from './SuggestionChips';
 
 export const MessageBubble = ({ 
@@ -19,7 +20,15 @@ export const MessageBubble = ({
     <div className={`gaply-message-wrapper ${isBot ? 'gaply-message-bot' : 'gaply-message-user'}`}>
       <div className="gaply-message-container">
         <div className="gaply-message-bubble">
-          {text}
+          {isBot ? (
+            <div className="gaply-markdown-body">
+              <ReactMarkdown>
+                {text}
+              </ReactMarkdown>
+            </div>
+          ) : (
+            text
+          )}
         </div>
         {isBot && suggestions && suggestions.length > 0 && (
           <div className={`gaply-inline-suggestions ${!isActiveSuggestions ? 'gaply-suggestions-disabled' : ''}`}>

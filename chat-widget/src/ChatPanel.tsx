@@ -6,7 +6,7 @@ import { VoiceButton } from './VoiceButton';
 import { AudioPlayer } from './AudioPlayer';
 
 export const ChatPanel = ({ tokenUrl, botName, onClose }: any) => {
-  const { room, messages, suggestions, isConnected, isProcessing, sendMessage, sendSettings } = useLiveKit(tokenUrl);
+  const { room, messages, isConnected, isProcessing, sendMessage, sendSettings } = useLiveKit(tokenUrl);
   const [inputText, setInputText] = useState("");
   
   // Voice output toggle: Determines if bot answers with audio (also sent to backend to avoid unnecessary TTS)
