@@ -110,7 +110,18 @@ async def entrypoint(ctx: JobContext):
             try:
                 meta = json.loads(p.metadata)
                 if "tenant_id" in meta:
-                    tenant_id = meta["tenant_id"]
+                    raw_tenant = meta["tenant_id"].lower()
+                    
+                    # Normalize tenant ID if it's a URL to prevent filename errors
+                    if "labs.gaplytiq.com" in raw_tenant or raw_tenant == "labs":
+                        tenant_id = "labs"
+                    elif "institute" in raw_tenant:
+                        tenant_id = "institutes"
+                    elif "enterprise" in raw_tenant:
+                        tenant_id = "enterprise"
+                    else:
+                        tenant_id = raw_tenant
+                        
                     break
             except Exception:
                 pass

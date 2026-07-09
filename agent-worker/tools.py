@@ -129,6 +129,59 @@ class InstituteTools:
             logger.error(f"Error in search_faqs: {e}")
             return "Service temporarily unavailable. Please contact us directly."
 
+# =====================================================================
+# LABS TOOLS
+# =====================================================================
+
+class LabsTools:
+    """
+    Tools exclusively for Gaplytiq Labs (Student Assessment Portal).
+    """
+    def __init__(self, tenant_id: str):
+        self.tenant_id = tenant_id
+        env_key = f"{tenant_id.upper()}_API_URL"
+        self.backend_url = os.getenv(env_key, os.getenv("GAPLYTIQ_BACKEND_URL", "http://localhost:5000/api"))
+        self.agent = None
+
+    @llm.function_tool(description="Help the student create a custom self-assessment mock test. Pass the title of the test and a list of modules they want (e.g., ['Aptitude', 'Coding', 'HR Interview']).")
+    async def create_self_assessment(self, title: str, modules: str):
+        try:
+            if hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'session'):
+                room = self.agent.session.room_io.room
+                # Tell frontend to navigate to the builder
+                data = json.dumps({
+                    "type": "website_control",
+                    "action": "navigate",
+                    "payload": {"url": "/student/dashboard?action=create"}
+                }).encode("utf-8")
+                await room.local_participant.publish_data(data, reliable=True)
+            return f"Successfully opened the Assessment Builder for '{title}'. Tell the user to finalize their module selection on screen."
+        except Exception as e:
+            logger.error(f"Error in create_self_assessment: {e}")
+            return f"Error executing website control: {str(e)}"
+
+    @llm.function_tool(description="Check the student's wallet balance and available credits for taking premium tests.")
+    async def check_wallet_balance(self):
+        try:
+            if hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'session'):
+                room = self.agent.session.room_io.room
+                data = json.dumps({
+                    "type": "website_control",
+                    "action": "navigate",
+                    "payload": {"url": "/student/wallet"}
+                }).encode("utf-8")
+                await room.local_participant.publish_data(data, reliable=True)
+            return "Navigated user to their wallet. Tell them they can view their balance there."
+        except Exception as e:
+            return f"Error: {e}"
+
+    @llm.function_tool(description="Get a list of the student's completed assessments and their scores.")
+    async def get_completed_assessments(self):
+        return "Tell the user they can view their completed assessments and scorecards in the 'Completed & Graded' tab on their dashboard."
+
+    @llm.function_tool(description="Redeem a promo code or voucher for wallet credits.")
+    async def redeem_promo_code(self, code: str):
+        return f"Instruct the user to click the 'Redeem Code' button on their dashboard to apply the promo code '{code}'."
 
 # =====================================================================
 # ENTERPRISE / B2B TOOLS (Example for future)

@@ -9,7 +9,7 @@ from livekit.agents import llm
 from livekit.plugins import openai, deepgram, silero
 from rag import RAGRetriever
 from prompts import get_system_prompt
-from tools import UniversalTools, InstituteTools, EnterpriseTools
+from tools import UniversalTools, InstituteTools, EnterpriseTools, LabsTools
 
 logger = logging.getLogger("gaply-agent")
 
@@ -38,6 +38,10 @@ class GaplyAgent(Agent):
             institute_api = InstituteTools(tenant_id=tenant_id)
             institute_api.agent = self
             tools.extend(llm.find_function_tools(institute_api))
+        elif tenant_id == "labs":
+            labs_api = LabsTools(tenant_id=tenant_id)
+            labs_api.agent = self
+            tools.extend(llm.find_function_tools(labs_api))
         elif tenant_id == "enterprise":
             enterprise_api = EnterpriseTools(tenant_id=tenant_id)
             enterprise_api.agent = self
