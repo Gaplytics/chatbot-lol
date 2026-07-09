@@ -223,49 +223,20 @@ docker-compose up -d token-api
 
 ## Giving the Bot Knowledge (RAG)
 
-The bot searches a vector database before answering. Without knowledge loaded it says *"I don't have that information right now."*
+The bot searches a vector database (Qdrant) before answering. Without knowledge loaded it says *"I don't have that information right now."*
 
-### Method 1 — Web Scraper (recommended)
+### Adding Knowledge Manually
 
-Configure the target URL in `.env`:
-
-```env
-SCRAPE_TARGET_URL=https://institute.gaplytiq.com
-SCRAPE_DEPTH=3
-```
-
-Trigger the scrape:
+1. Place your knowledge files (Markdown format) in the `agent-worker/knowledge/` directory. For example, edit the existing `faq.md`.
+2. Run the ingestion script inside the agent container to embed and upload the files to Qdrant:
 
 ```bash
-curl -X POST http://localhost:8080/admin/scrape
+docker exec -it gaply-chatbot-agent-worker-1 python ingest.py
 ```
 
-This crawls the site, chunks the content, embeds it with OpenAI `text-embedding-3-small`, and stores it in Qdrant.
+This reads the markdown files, chunks the content, embeds it with OpenAI `text-embedding-3-small`, and stores it in Qdrant.
 
-### Method 2 — Upload text manually
-
-```bash
-curl -X POST http://localhost:8080/admin/ingest \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Paste your course content here...", "source": "manual"}'
-```
-
-### Method 3 — Qdrant Dashboard (direct)
-
-Open **http://localhost:6334/dashboard** to view, add, or delete knowledge chunks manually.
-
-### Check knowledge base stats
-
-```bash
-curl http://localhost:8080/admin/knowledge/stats
-```
-
-### Clear and re-ingest
-
-```bash
-curl -X DELETE http://localhost:8080/admin/knowledge
-curl -X POST http://localhost:8080/admin/scrape
-```
+*(Note: The `/admin/scrape` and `/admin/ingest` REST endpoints in the Token API are currently placeholder stubs for future Redis PubSub architecture. Use the `docker exec` method above for now.)*
 
 ---
 
