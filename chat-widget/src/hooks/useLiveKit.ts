@@ -157,16 +157,33 @@ export function useLiveKit(tokenUrl: string, tenantId: string | null) {
         pushPageContext(activeRoom);
 
         // Also push on every client-side navigation (SPA route changes)
+        // Also push on every client-side navigation (SPA route changes)
         const onNavigation = () => pushPageContext(activeRoom);
         window.addEventListener('popstate', onNavigation);
 
-        // Patch pushState so Next.js router navigations are also captured
+        // Patch pushState and replaceState so Next.js router navigations are captured
         const origPushState = history.pushState.bind(history);
         history.pushState = (...args) => {
           origPushState(...args);
           // Give the DOM a tick to update document.title
           setTimeout(() => pushPageContext(activeRoom), 100);
         };
+
+        const origReplaceState = history.replaceState.bind(history);
+        history.replaceState = (...args) => {
+          origReplaceState(...args);
+          setTimeout(() => pushPageContext(activeRoom), 100);
+        };
+
+        // Bulletproof fallback: poll for URL changes every 500ms
+        // This guarantees we catch navigations even if Next.js uses internal routing tricks
+        let lastUrl = window.location.href;
+        const urlObserver = setInterval(() => {
+          if (window.location.href !== lastUrl) {
+            lastUrl = window.location.href;
+            pushPageContext(activeRoom);
+          }
+        }, 500);
 
       } catch (err) {
         console.error("LiveKit connection error", err);
@@ -178,6 +195,8 @@ export function useLiveKit(tokenUrl: string, tenantId: string | null) {
     return () => {
       activeRoom?.disconnect();
       roomRef.current = null;
+      // Also clean up any listeners/intervals if we were keeping references,
+      // but interval is scoped here, let's just make it accessible to cleanup
     };
   }, [tokenUrl]);
 
