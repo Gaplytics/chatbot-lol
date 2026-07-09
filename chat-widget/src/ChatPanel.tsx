@@ -6,7 +6,7 @@ import { VoiceButton } from './VoiceButton';
 import { AudioPlayer } from './AudioPlayer';
 
 export const ChatPanel = ({ tokenUrl, botName, onClose }: any) => {
-  const { room, messages, isConnected, isProcessing, sendMessage, sendSettings } = useLiveKit(tokenUrl);
+  const { room, messages, isConnected, isProcessing, sendMessage, sendSettings, selectSuggestion } = useLiveKit(tokenUrl);
   const [inputText, setInputText] = useState("");
   
   // Voice output toggle: Determines if bot answers with audio (also sent to backend to avoid unnecessary TTS)
@@ -77,8 +77,9 @@ export const ChatPanel = ({ tokenUrl, botName, onClose }: any) => {
               text={m.text} 
               sender={m.sender} 
               suggestions={m.suggestions}
+              selectedSuggestion={m.selectedSuggestion}
               isActiveSuggestions={isActive}
-              onSelectSuggestion={(text) => sendMessage(text, botVoiceOutput)}
+              onSelectSuggestion={(text) => selectSuggestion(m.id || `msg-${i}`, text, botVoiceOutput)}
             />
           );
         })}

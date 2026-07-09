@@ -106,11 +106,15 @@ export function useLiveKit(tokenUrl: string) {
 
         // Voice transcriptions (agent TTS or user mic speech)
         activeRoom.on(RoomEvent.TranscriptionReceived, (segments, participant) => {
-          const msgs = [...messagesRef.current];
           const sender = participant?.identity?.includes('agent') ? 'bot' : 'user';
           
-          let hasFinalAgentMessage = false;
+          // The bot's responses are already streamed in real-time via the data channel ('text_stream').
+          // Skip rendering bot-side voice transcriptions in the UI to prevent double bubbles.
+          if (sender === 'bot') {
+            return;
+          }
 
+          const msgs = [...messagesRef.current];
           segments.forEach(t => {
             const existingIdx = msgs.findIndex(m => m.id === t.id);
             if (existingIdx >= 0) {
@@ -118,17 +122,9 @@ export function useLiveKit(tokenUrl: string) {
             } else {
               msgs.push({ id: t.id, text: t.text, sender, final: t.final });
             }
-            
-            if (sender === 'bot' && t.final) {
-              hasFinalAgentMessage = true;
-            }
           });
           
           updateMessages(msgs);
-          
-          if (hasFinalAgentMessage) {
-             setIsProcessing(false);
-          }
         });
 
         await activeRoom.connect(data.livekit_url, data.token);
@@ -179,5 +175,16 @@ export function useLiveKit(tokenUrl: string) {
     }
   }, [room, isConnected]);
 
-  return { room, messages, isConnected, isProcessing, sendMessage, sendSettings };
+  /** Selects a suggestion chip, marking it in the message object and sending the message. */
+  const selectSuggestion = useCallback((messageId: string, text: string, voiceResponse: boolean = false) => {
+    const msgs = [...messagesRef.current];
+    const idx = msgs.findIndex(m => m.id === messageId);
+    if (idx >= 0) {
+      msgs[idx] = { ...msgs[idx], selectedSuggestion: text };
+      updateMessages(msgs);
+    }
+    sendMessage(text, voiceResponse);
+  }, [sendMessage]);
+
+  return { room, messages, isConnected, isProcessing, sendMessage, sendSettings, selectSuggestion };
 }
