@@ -52,8 +52,8 @@ async def _generate_suggestions(last_reply: str, agent: GaplyAgent, room: rtc.Ro
         # ── Step 5: Generate suggestions strictly from KB content ───────────
         tenant_name = "Gaplytiq Labs" if agent._tenant_id == "labs" else "Gaplytiq Enterprise" if agent._tenant_id == "enterprise" else "Gaplytiq Institute"
         prompt = (
-            f"You generate clickable follow-up question chips for a {tenant_name} chatbot.\n\n"
-            "KNOWLEDGE BASE — the ONLY source of truth. The bot can ONLY answer questions covered here:\n"
+            f"You generate clickable follow-up suggestion chips for a {tenant_name} chatbot.\n\n"
+            "KNOWLEDGE BASE — the ONLY source of truth:\n"
             f"{kb_chunks}\n\n"
             "RECENT CONVERSATION:\n"
             f"{history_str}\n\n"
@@ -62,12 +62,12 @@ async def _generate_suggestions(last_reply: str, agent: GaplyAgent, room: rtc.Ro
             "QUESTIONS THE USER ALREADY ASKED (do NOT suggest these):\n"
             f"{asked_str}\n\n"
             "RULES — follow them strictly:\n"
-            "1. Generate EXACTLY 3 questions\n"
-            "2. Every question MUST be answerable using the KNOWLEDGE BASE above — if the KB doesn't cover a topic, do NOT suggest it\n"
-            "3. Questions must feel natural and relevant to what was just discussed\n"
-            "4. Keep each question between 3-8 words\n"
-            "5. Do NOT repeat already-asked questions\n"
-            "6. Return ONLY a raw JSON array of 3 strings, no markdown, no explanation\n\n"
+            "1. Generate EXACTLY 3 short phrases (3-8 words each).\n"
+            "2. If the LAST BOT REPLY asks a direct question (e.g. 'Should we proceed?', 'Which one?'), your suggestions MUST be natural ANSWERS to that question (e.g. 'Yes, proceed', 'No, change it').\n"
+            "3. If the bot did NOT ask a question, generate relevant follow-up QUESTIONS the user might want to ask next based on the KNOWLEDGE BASE.\n"
+            "4. Keep them conversational and highly relevant to what was just discussed.\n"
+            "5. Do NOT repeat already-asked questions.\n"
+            "6. Return ONLY a raw JSON array of 3 strings, no markdown, no explanation.\n\n"
             'Example output: ["Who configures the tests?", "Can MBA students access coding?", "How long does approval take?"]'
         )
 

@@ -164,12 +164,16 @@ class LabsTools:
         try:
             if hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'session'):
                 room = self.agent.session.room_io.room
-                # Dispatch a named action event — the dashboard React page listens for this
-                # and calls its internal handleCreateNew() without any page reload
+                # Safely parse moduleKeys which might be a string or already a list from LLM
+                if isinstance(moduleKeys, list):
+                    parsed_modules = [k.strip() for k in moduleKeys if k and isinstance(k, str) and k.strip()]
+                else:
+                    parsed_modules = [k.strip() for k in str(moduleKeys).split(',') if k.strip()]
+                
                 data = json.dumps({
                     "type": "website_control",
                     "action": "create_assessment",
-                    "payload": {"title": title, "modules": [k.strip() for k in moduleKeys.split(',') if k.strip()]}
+                    "payload": {"title": title, "modules": parsed_modules}
                 }).encode("utf-8")
                 await room.local_participant.publish_data(data, reliable=True)
             return f"Opened the Assessment Builder for '{title}'. The student can now select their modules on screen."
