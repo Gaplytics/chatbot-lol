@@ -103,8 +103,22 @@ async def entrypoint(ctx: JobContext):
     bot_name = os.getenv("BOT_NAME", "Gaply")
     logger.info(f"Starting agent '{bot_name}' in room {ctx.room.name}.")
 
+    tenant_id = "institutes" # Default fallback
+    # Find the user participant and extract the tenant_id from their secure token metadata
+    for p in ctx.room.remote_participants.values():
+        if p.metadata:
+            try:
+                meta = json.loads(p.metadata)
+                if "tenant_id" in meta:
+                    tenant_id = meta["tenant_id"]
+                    break
+            except Exception:
+                pass
+
+    logger.info(f"Detected Tenant ID: {tenant_id}")
+
     session = AgentSession()
-    gaply_agent = GaplyAgent()
+    gaply_agent = GaplyAgent(tenant_id=tenant_id)
 
     # Wire suggestions callback into the agent.
     # NOTE: there is no more _text_reply_callback — every chat message (typed

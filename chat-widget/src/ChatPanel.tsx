@@ -5,8 +5,8 @@ import { VoiceButton } from './VoiceButton';
 import { AudioPlayer } from './AudioPlayer';
 import { Send, Minimize2, Volume2, VolumeX } from 'lucide-react';
 
-export const ChatPanel = ({ tokenUrl, botName, onClose }: any) => {
-  const { room, messages, isConnected, isProcessing, sendMessage, sendSettings, selectSuggestion } = useLiveKit(tokenUrl);
+export const ChatPanel = ({ tokenUrl, botName, tenantId, onClose }: any) => {
+  const { room, messages, isConnected, isProcessing, sendMessage, sendSettings, selectSuggestion } = useLiveKit(tokenUrl, tenantId);
   const [inputText, setInputText] = useState("");
   
   // Voice output toggle: Determines if bot answers with audio (also sent to backend to avoid unnecessary TTS)

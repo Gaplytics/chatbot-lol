@@ -26,9 +26,9 @@ class GaplyAgent(Agent):
     turn.
     """
 
-    def __init__(self):
+    def __init__(self, tenant_id: str = "institutes"):
         bot_name = os.getenv("BOT_NAME", "Gaply")
-        initial_system_prompt = get_system_prompt(bot_name, "No context loaded yet.")
+        initial_system_prompt = get_system_prompt(bot_name, "No context loaded yet.", tenant_id)
 
         api = GaplytiqAPI()
         api.agent = self
@@ -42,8 +42,9 @@ class GaplyAgent(Agent):
             tts=deepgram.TTS(model=os.getenv("BOT_VOICE", "aura-2-luna-en")),
             tools=tools,
         )
-        self._retriever = RAGRetriever()
+        self._retriever = RAGRetriever(tenant_id=tenant_id)
         self._bot_name = bot_name
+        self._tenant_id = tenant_id
 
         # Starts OFF to match the UI default. This ONLY gates tts_node now —
         # it does not affect which LLM path is used or whether tools work.
@@ -237,7 +238,7 @@ class GaplyAgent(Agent):
 
         # Build system prompt + inject shared history for cross-mode memory
         history_block = self._build_history_block()
-        updated_prompt = get_system_prompt(self._bot_name, context) + history_block
+        updated_prompt = get_system_prompt(self._bot_name, context, self._tenant_id) + history_block
         await self.update_instructions(updated_prompt)
 
         # Unconditionally track the user turn — llm_node tracks the assistant

@@ -1,17 +1,18 @@
 import os
 import logging
 from qdrant_client import QdrantClient
-from qdrant_client.models import NamedVector
+from qdrant_client.models import NamedVector, Filter, FieldCondition, MatchValue
 from openai import AsyncOpenAI
 
 logger = logging.getLogger("gaply-rag")
 
 class RAGRetriever:
-    def __init__(self):
+    def __init__(self, tenant_id: str = "institutes"):
         qdrant_url = os.getenv("QDRANT_URL", "http://qdrant:6333")
         self.collection_name = os.getenv("QDRANT_COLLECTION", "gaply_knowledge")
         self.qclient = QdrantClient(url=qdrant_url)
         self.openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.tenant_id = tenant_id
 
     async def retrieve(self, query: str, top_k: int = 5) -> str:
         """
@@ -31,6 +32,9 @@ class RAGRetriever:
                 collection_name=self.collection_name,
                 query=query_vector,
                 limit=top_k,
+                query_filter=Filter(
+                    must=[FieldCondition(key="tenant_id", match=MatchValue(value=self.tenant_id))]
+                )
             )
 
             points = search_result.points if hasattr(search_result, 'points') else search_result

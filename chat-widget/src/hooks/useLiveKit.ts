@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Room, RoomEvent } from 'livekit-client';
 
-export function useLiveKit(tokenUrl: string) {
+export function useLiveKit(tokenUrl: string, tenantId: string = "institutes") {
   const [room, setRoom] = useState<Room | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -23,7 +23,7 @@ export function useLiveKit(tokenUrl: string) {
       try {
         const resp = await fetch(tokenUrl, { 
           method: 'POST', 
-          body: JSON.stringify({ participant_name: "User" }), 
+          body: JSON.stringify({ participant_name: "User", tenant_id: tenantId }), 
           headers: { 'Content-Type': 'application/json' }
         });
         const data = await resp.json();

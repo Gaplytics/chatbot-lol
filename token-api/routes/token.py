@@ -6,8 +6,11 @@ from livekit import api
 
 router = APIRouter()
 
+import json
+
 class TokenRequest(BaseModel):
     participant_name: str = "User"
+    tenant_id: str = "institutes"
     metadata: dict = None
 
 @router.post("")
@@ -41,8 +44,10 @@ async def create_token(req: TokenRequest):
         livekit_api_secret
     ).with_grants(grant).with_identity(participant_identity).with_name(req.participant_name)
     
-    if req.metadata:
-        access_token = access_token.with_metadata(str(req.metadata))
+    # Inject tenant_id into metadata
+    meta = req.metadata or {}
+    meta["tenant_id"] = req.tenant_id
+    access_token = access_token.with_metadata(json.dumps(meta))
         
     token_str = access_token.to_jwt()
     

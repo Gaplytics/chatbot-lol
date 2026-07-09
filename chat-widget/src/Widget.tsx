@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ChatPanel } from './ChatPanel';
 import { MessageCircle, X } from 'lucide-react';
 
-export const Widget = ({ tokenUrl, botName, theme }: { tokenUrl: string, botName: string, theme: string }) => {
+export const Widget = ({ tokenUrl, botName, theme, tenantId }: { tokenUrl: string, botName: string, theme: string, tenantId: string }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hasOpened, setHasOpened] = useState(false);
 
@@ -17,7 +17,7 @@ export const Widget = ({ tokenUrl, botName, theme }: { tokenUrl: string, botName
     <div className={`gaply-widget gaply-theme-${theme}`}>
       {hasOpened && (
         <div className="gaply-panel-container" style={{ display: isOpen ? 'flex' : 'none' }}>
-          <ChatPanel tokenUrl={tokenUrl} botName={botName} onClose={() => setIsOpen(false)} />
+          <ChatPanel tokenUrl={tokenUrl} botName={botName} tenantId={tenantId} onClose={() => setIsOpen(false)} />
         </div>
       )}
       
