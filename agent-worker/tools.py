@@ -7,19 +7,22 @@ from livekit.agents import llm
 
 logger = logging.getLogger("gaply-tools")
 
-# Get backend URL from environment variables
-BACKEND_URL = os.getenv("GAPLYTIQ_BACKEND_URL", "http://localhost:5000/api")
-
 class GaplytiqAPI:
     """
     Function context for Gaplytiq Institute APIs.
     These methods allow the LLM to fetch live data autonomously.
     """
     
+    def __init__(self, tenant_id: str = "institutes"):
+        self.tenant_id = tenant_id
+        # Look for a specific API URL (e.g., INSTITUTES_API_URL), otherwise fall back to global
+        env_key = f"{tenant_id.upper()}_API_URL"
+        self.backend_url = os.getenv(env_key, os.getenv("GAPLYTIQ_BACKEND_URL", "http://localhost:5000/api"))
+    
     @llm.function_tool(description="Get a list of all available courses and their basic information.")
     async def get_all_courses(self):
         try:
-            resp = requests.get(f"{BACKEND_URL}/courses", timeout=5)
+            resp = requests.get(f"{self.backend_url}/courses", timeout=5)
             if resp.status_code == 200:
                 return f"Available courses: {resp.json()}"
             return "Failed to fetch courses. Please check the website."
@@ -30,7 +33,7 @@ class GaplytiqAPI:
     @llm.function_tool(description="Get detailed information about a specific course by its name.")
     async def get_course_details(self, course_name: str):
         try:
-            resp = requests.get(f"{BACKEND_URL}/courses", params={"search": course_name}, timeout=5)
+            resp = requests.get(f"{self.backend_url}/courses", params={"search": course_name}, timeout=5)
             if resp.status_code == 200:
                 return f"Course details for {course_name}: {resp.json()}"
             return f"Failed to fetch details for {course_name}."
@@ -41,7 +44,7 @@ class GaplytiqAPI:
     @llm.function_tool(description="Get the current pricing and fees for a specific course.")
     async def get_pricing(self, course_name: str):
         try:
-            resp = requests.get(f"{BACKEND_URL}/courses/{course_name}/pricing", timeout=5)
+            resp = requests.get(f"{self.backend_url}/courses/{course_name}/pricing", timeout=5)
             if resp.status_code == 200:
                 return f"Pricing for {course_name}: {resp.json()}"
             return f"Could not retrieve pricing for {course_name}."
@@ -52,7 +55,7 @@ class GaplytiqAPI:
     @llm.function_tool(description="Check seat availability for a specific course batch.")
     async def check_availability(self, course_name: str):
         try:
-            resp = requests.get(f"{BACKEND_URL}/courses/{course_name}/availability", timeout=5)
+            resp = requests.get(f"{self.backend_url}/courses/{course_name}/availability", timeout=5)
             if resp.status_code == 200:
                 return f"Availability for {course_name}: {resp.json()}"
             return f"Could not check availability for {course_name}."
@@ -63,7 +66,7 @@ class GaplytiqAPI:
     @llm.function_tool(description="Get the schedule and upcoming batch dates for a specific course.")
     async def get_upcoming_batches(self, course_name: str):
         try:
-            resp = requests.get(f"{BACKEND_URL}/courses/{course_name}/schedule", timeout=5)
+            resp = requests.get(f"{self.backend_url}/courses/{course_name}/schedule", timeout=5)
             if resp.status_code == 200:
                 return f"Upcoming batches for {course_name}: {resp.json()}"
             return f"Could not fetch batch schedule for {course_name}."
@@ -74,7 +77,7 @@ class GaplytiqAPI:
     @llm.function_tool(description="Get contact information for Gaplytiq Institute.")
     async def get_contact_info(self):
         try:
-            resp = requests.get(f"{BACKEND_URL}/contact", timeout=5)
+            resp = requests.get(f"{self.backend_url}/contact", timeout=5)
             if resp.status_code == 200:
                 return f"Contact info: {resp.json()}"
             return "Contact info: Email us at support@gaplytiq.com or call our helpline."
@@ -85,7 +88,7 @@ class GaplytiqAPI:
     @llm.function_tool(description="Search for Frequently Asked Questions (FAQs) by topic.")
     async def search_faqs(self, topic: str):
         try:
-            resp = requests.get(f"{BACKEND_URL}/faqs", params={"topic": topic}, timeout=5)
+            resp = requests.get(f"{self.backend_url}/faqs", params={"topic": topic}, timeout=5)
             if resp.status_code == 200:
                 return f"FAQ results for {topic}: {resp.json()}"
             return f"No specific FAQs found for {topic}."

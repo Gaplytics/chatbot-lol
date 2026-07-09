@@ -30,7 +30,7 @@ class GaplyAgent(Agent):
         bot_name = os.getenv("BOT_NAME", "Gaply")
         initial_system_prompt = get_system_prompt(bot_name, "No context loaded yet.", tenant_id)
 
-        api = GaplytiqAPI()
+        api = GaplytiqAPI(tenant_id=tenant_id)
         api.agent = self
         tools = llm.find_function_tools(api)
 

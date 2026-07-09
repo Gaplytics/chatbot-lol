@@ -91,6 +91,11 @@ WIDGET_CORS_ORIGINS=http://localhost:3000,https://yourdomain.com
 BOT_NAME=Gaply
 BOT_VOICE=aura-2-luna-en
 BOT_VOICE_STT_MODEL=nova-3
+
+# Multi-Tenant Backend APIs (For function tools)
+GAPLYTIQ_BACKEND_URL=http://localhost:5000/api
+INSTITUTES_API_URL=https://institute.gaplytiq.com/api
+ENTERPRISES_API_URL=https://enterprises.gaplytiq.com/api
 ```
 
 > Leave `QDRANT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` unchanged for local development.
