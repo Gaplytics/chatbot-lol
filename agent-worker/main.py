@@ -50,8 +50,9 @@ async def _generate_suggestions(last_reply: str, agent: GaplyAgent, room: rtc.Ro
         history_str = "\n".join(history_lines) or "(start of conversation)"
 
         # ── Step 5: Generate suggestions strictly from KB content ───────────
+        tenant_name = "Gaplytiq Labs" if agent._tenant_id == "labs" else "Gaplytiq Enterprise" if agent._tenant_id == "enterprise" else "Gaplytiq Institute"
         prompt = (
-            "You generate clickable follow-up question chips for a Gaplytiq Institute chatbot.\n\n"
+            f"You generate clickable follow-up question chips for a {tenant_name} chatbot.\n\n"
             "KNOWLEDGE BASE — the ONLY source of truth. The bot can ONLY answer questions covered here:\n"
             f"{kb_chunks}\n\n"
             "RECENT CONVERSATION:\n"

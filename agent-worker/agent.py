@@ -193,8 +193,9 @@ class GaplyAgent(Agent):
         To also control TTS on startup, see INITIAL_VOICE_OUTPUT in main.py (voice_output_enabled).
         """
         # ── 1. Customise the greeting message here ──────────────────────────
+        tenant_name = "Gaplytiq Labs" if self._tenant_id == "labs" else "Gaplytiq Enterprise" if self._tenant_id == "enterprise" else "Gaplytiq Institute"
         greeting_text = (
-            f"Hello! I'm {self._bot_name}, your Gaplytiq Institute assistant. "
+            f"Hello! I'm {self._bot_name}, your {tenant_name} assistant. "
             "How can I help you today? 👋"
         )
 
